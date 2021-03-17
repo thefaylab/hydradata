@@ -16,3 +16,6 @@ inst/doc
 images
 archive
 temp
+
+.DS_Store
+
