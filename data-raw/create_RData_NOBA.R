@@ -78,7 +78,7 @@ get_DatData <- function(path){
 
 
   # sizebin lengths
-  binwidth <- read.csv(paste0(path,"/length_sizebins.csv"),header=TRUE)
+  binwidth <- read.csv(paste0(path,"/length_sizebins_NOBA.csv"),header=TRUE)
   d$binwidth <- binwidth[1:d$Nspecies,1:d$Nsizebins]
   row.names(d$binwidth) <- binwidth[,ncol(binwidth)]
 
