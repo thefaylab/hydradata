@@ -88,9 +88,9 @@ get_DatData <- function(path){
   d$lenwtb <- lenwt$b
 
   # covariate information relating to recruitment, growth and maturity
-  recruitmentCovs <- read.csv(paste0(path,"/recruitment_covariates.csv"),header=TRUE)
-  maturityCovs <- read.csv(paste0(path,"/maturity_covariates.csv"),header=TRUE)
-  growthCovs <- read.csv(paste0(path,"/growth_covariates.csv"),header=TRUE)
+  recruitmentCovs <- read.csv(paste0(path,"/recruitment_covariates_NOBA.csv"),header=TRUE)
+  maturityCovs <- read.csv(paste0(path,"/maturity_covariates_NOBA.csv"),header=TRUE)
+  growthCovs <- read.csv(paste0(path,"/growth_covariates_NOBA.csv"),header=TRUE)
 
   d$recruitmentCov <- t(recruitmentCovs)
   d$maturityCov <- t(maturityCovs)
