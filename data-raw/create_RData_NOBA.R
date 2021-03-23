@@ -114,7 +114,7 @@ get_DatData <- function(path){
   d$fleetNames <- (names(obsEffort)[2:(d$Nfleets+1)])
 
   # observed temperature
-  obsTemp <- read.csv(paste0(path,"/observation_temperature.csv"),header=TRUE)
+  obsTemp <- read.csv(paste0(path,"/observation_temperature_NOBA_BTS_fall_allbox_effic1.csv"),header=TRUE)
   d$observedTemperature <- t(obsTemp)
 
   # stomach weight
