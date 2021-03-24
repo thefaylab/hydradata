@@ -109,7 +109,7 @@ get_DatData <- function(path){
   d$observedCatch <- t(obsCatch)
 
   # observed effort by fleet
-  obsEffort <- read.csv(paste0(path,"/observation_effort.csv"),header=TRUE)
+  obsEffort <- read.csv(paste0(path,"/observation_effort_NOBA.csv"),header=TRUE)
   d$observedEffort <- t(obsEffort)
   d$fleetNames <- (names(obsEffort)[2:(d$Nfleets+1)])
 
@@ -155,7 +155,7 @@ get_DatData <- function(path){
 
 
   # sex ratio
-  sexRatio <- read.csv(paste0(path,"/sexratio.csv"),header=TRUE,row.names=1)
+  sexRatio <- read.csv(paste0(path,"/sexratio_NOBA.csv"),header=TRUE,row.names=1)
   d$sexRatio <- unlist(sexRatio)
 
   # recruitment covariate effects. # columns = d$Nrecruitment_cov
