@@ -179,7 +179,7 @@ get_DatData <- function(path){
   d$maturityCovEffects <- as.matrix(maturity_covEffects)
 
   # growth
-  growth <- read.csv(paste0(path,"/growth_species.csv"),header=TRUE,row.names=1)
+  growth <- read.csv(paste0(path,"/growth_species_NOBA_era1_BTS_fall_allbox_effic1.csv"),header=TRUE,row.names=1)
   d$growthPsi <- unlist(growth["psi",])
   d$growthKappa <- unlist(growth["kappa",])
   d$growthLinf <- unlist(growth["Linf",])
