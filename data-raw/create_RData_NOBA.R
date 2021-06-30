@@ -101,14 +101,18 @@ get_DatData <- function(path){
   d$NgrowthCov <- dim(d$growthCov)[1]
 
   # observed survey biomass
-  obsBio <- read.csv(paste0(path,"/observation_biomass_NOBA_BTS_fall_allbox_effic1.csv"),header=TRUE)
-  d$observedBiomass <- t(obsBio)
-
-  # observed survey biomass
-  obsCatch <- read.csv(paste0(path,"/observation_catch_NOBA_census.csv"),header=TRUE)
-  d$observedCatch <- t(obsCatch)
-
-  # observed effort by fleet
+  #obsBio <- read.csv(paste0(path,"/observation_biomass_NOBA_BTS_fall_allbox_effic1.csv"),header=TRUE)
+  #d$observedBiomass <- t(obsBio)
+  # new long format
+  obsBio <- read.csv(paste0(path,"/observation_biomass_NOBA_allsurvs.csv"),header=TRUE)
+  
+  # observed catch biomass
+  #obsCatch <- read.csv(paste0(path,"/observation_catch_NOBA_census.csv"),header=TRUE)
+  #d$observedCatch <- t(obsCatch)
+  # new long format
+  obsCatch <- read.csv(paste0(path,"/observation_catch_NOBA_allfisheries.csv"),header=TRUE)
+  
+  # observed effort by fleet (dummy, not used in estimation model)
   obsEffort <- read.csv(paste0(path,"/observation_effort_NOBA.csv"),header=TRUE)
   d$observedEffort <- t(obsEffort)
   d$fleetNames <- (names(obsEffort)[2:(d$Nfleets+1)])
