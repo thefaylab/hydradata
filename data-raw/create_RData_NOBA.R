@@ -152,7 +152,7 @@ get_DatData <- function(path){
   d$observedTemperature <- t(obsTemp)
 
   # stomach weight
-  stomachContent <- read.csv(paste0(path,"/intake_stomachContent.csv"),header=TRUE)
+  stomachContent <- read.csv(paste0(path,"/intake_stomachContent_NOBA.csv"),header=TRUE)
   d$intakeStomach <- as.matrix(stomachContent[,2:(d$Nsizebins+1)])
 
   # recruitment parameters
