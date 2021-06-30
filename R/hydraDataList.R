@@ -79,6 +79,7 @@
 #'   \item{NrecruitmentCov}{Integer scalar: Number og recruitment covariates. See \code{recruitmentCov}}
 #'   \item{Nsizebins}{Integer scalar: Number of size classes (Each species must have same number of size classes, different widths.). See \code{binwidth}}
 #'   \item{Nspecies}{Integer scalar: Number of species in the model}
+#'   \item{Nsurveys}{Integer scalar: Number of survey index time series used in the model}
 #'   \item{Nthresholds}{Integer scalar: number of assessment threshold. See \code{thresholds} for thresholf values}
 #'   \item{numGuilds}{Integer scalar: Number of guilds. See \code{guildNames}}
 #'   \item{Nyrs}{Integer scalar: Number of years in the model}

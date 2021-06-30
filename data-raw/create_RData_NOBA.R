@@ -105,12 +105,42 @@ get_DatData <- function(path){
   #d$observedBiomass <- t(obsBio)
   # new long format
   obsBio <- read.csv(paste0(path,"/observation_biomass_NOBA_allsurvs.csv"),header=TRUE)
+  d$Nsurvey_obs <- dim(obsBio)[1]
+  obsBio$survey <- as.numeric(obsBio$survey)
+  obsBio$species <- as.numeric(obsBio$species)
+  d$observedBiomass <- obsBio 
+  
+  # observed survey size composition
+  obsSurvSize <- read.csv(paste0(path,"/observation_lengths_NOBA_allsurvs.csv"),header=TRUE)
+  d$Nsurvey_size_obs <- dim(obsSurvSize)[1]
+  obsSurvSize$survey <- as.numeric(obsSurvSize$survey)
+  obsSurvSize$species <- as.numeric(obsSurvSize$species)
+  d$observedSurvSize <- obsSurvSize 
   
   # observed catch biomass
   #obsCatch <- read.csv(paste0(path,"/observation_catch_NOBA_census.csv"),header=TRUE)
   #d$observedCatch <- t(obsCatch)
   # new long format
   obsCatch <- read.csv(paste0(path,"/observation_catch_NOBA_allfisheries.csv"),header=TRUE)
+  d$Ncatch_obs <- dim(obsCatch)[1]
+  obsCatch$fishery <- as.numeric(obsCatch$fishery)
+  obsCatch$species <- as.numeric(obsCatch$species)
+  d$observedCatch <- obsCatch
+  
+  # observed catch size composition
+  obsCatchSize <- read.csv(paste0(path,"/observation_lengths_NOBA_allfisheries.csv"),header=TRUE)
+  d$Ncatch_size_obs <- dim(obsCatchSize)[1]
+  obsCatchSize$fishery <- as.numeric(obsCatchSize$fishery)
+  obsCatchSize$species <- as.numeric(obsCatchSize$species)
+  d$observedCatchSize <- obsCatchSize 
+  
+  # observed survey diet proportion by weight
+  obsSurvDiet <- read.csv(paste0(path,"/observation_diets_NOBA_allsurvs.csv"),header=TRUE)
+  d$Ndietprop_obs <- dim(obsSurvDiet)[1]
+  obsSurvDiet$survey <- as.numeric(obsSurvDiet$survey)
+  obsSurvDiet$species <- as.numeric(obsSurvDiet$species)
+  obsSurvDiet$sizebin <- as.numeric(regmatches(obsSurvDiet$sizebin, regexpr("\\d+", obsSurvDiet$sizebin)))#take the number portion of sizebinN
+  d$observedSurvDiet <- obsSurvDiet
   
   # observed effort by fleet (dummy, not used in estimation model)
   obsEffort <- read.csv(paste0(path,"/observation_effort_NOBA.csv"),header=TRUE)
