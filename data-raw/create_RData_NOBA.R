@@ -242,9 +242,9 @@ get_DatData <- function(path){
   d$M2sizePrefSigma <- as.matrix(M2sizePref["sigma",])
 
   #fishery/fleet selectivity
-  fisherySelectivityc<- read.csv(paste0(path,"/fishing_selectivityc.csv"),header=TRUE,row.names = 1)
+  fisherySelectivityc<- read.csv(paste0(path,"/fishing_selectivityc_NOBA.csv"),header=TRUE,row.names = 1)
   d$fisherySelectivityc <- fisherySelectivityc
-  fisherySelectivityd<- read.csv(paste0(path,"/fishing_selectivityd.csv"),header=TRUE,row.names = 1)
+  fisherySelectivityd<- read.csv(paste0(path,"/fishing_selectivityd_NOBA.csv"),header=TRUE,row.names = 1)
   d$fisherySelectivityd <- fisherySelectivityd
 
   # B0 - equilibrium biomass
@@ -268,16 +268,18 @@ get_DatData <- function(path){
   d$scaledEffort <- unlist(scaledEffort)
 
   # discard coefficient - prob of discard
-  discardCoef <-  read.csv(paste0(path,"/fishing_discards.csv"),header=TRUE,skip=3,row.names = 1)
+  discardCoef <-  read.csv(paste0(path,"/fishing_discards_NOBA.csv"),header=TRUE,#skip=3,
+                           row.names = 1)
   d$discardCoef <- (unlist(as.matrix(discardCoef)))
 
   # discard survival probability | discard
-  discardSurvival <-  read.csv(paste0(path,"/fishing_discardsSurvival.csv"),header=TRUE,skip=3,row.names = 1)
+  discardSurvival <-  read.csv(paste0(path,"/fishing_discardsSurvival_NOBA.csv"),header=TRUE,#skip=3,
+                               row.names = 1)
   d$discardSurvival <- (unlist(as.matrix(discardSurvival)))
 
 
   # fishery catchability indicator (q's)
-  indicatorFisheryqs<- read.csv(paste0(path,"/fishing_q_indicator.csv"),header=TRUE,row.names = 1)
+  indicatorFisheryqs<- read.csv(paste0(path,"/fishing_q_indicator_NOBA.csv"),header=TRUE,row.names = 1)
   d$indicatorFisheryq<- unlist(as.matrix(indicatorFisheryqs))
 
   # Autoregressive parameters for alternative error structure (AR) for survey, recruitment, catch
