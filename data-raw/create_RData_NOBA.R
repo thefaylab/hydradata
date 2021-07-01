@@ -156,7 +156,7 @@ get_DatData <- function(path){
   d$intakeStomach <- as.matrix(stomachContent[,2:(d$Nsizebins+1)])
 
   # recruitment parameters
-  stockRecruit <- read.csv(paste0(path,"/recruitment_species.csv"),header=TRUE,row.names=1)
+  stockRecruit <- read.csv(paste0(path,"/recruitment_species_NOBA.csv"),header=TRUE,row.names=1)
 
   d$alphaEggRicker <- unlist(stockRecruit["eggRicker_alpha",])
   d$shapeEggRicker <- unlist(stockRecruit["eggRicker_shape",])
@@ -193,23 +193,23 @@ get_DatData <- function(path){
   d$sexRatio <- unlist(sexRatio)
 
   # recruitment covariate effects. # columns = d$Nrecruitment_cov
-  rec_covEffects <- read.csv(paste0(path,"/recruitment_covariateEffects.csv"),header=TRUE,row.names=1)
+  rec_covEffects <- read.csv(paste0(path,"/recruitment_covariateEffects_NOBA.csv"),header=TRUE,row.names=1)
   d$recruitCovEffects <- as.matrix(rec_covEffects)
 
   # fecundity
-  fecundity_d_h <- read.csv(paste0(path,"/fecundity_species.csv"),header=TRUE,row.names=1)
+  fecundity_d_h <- read.csv(paste0(path,"/fecundity_species_NOBA.csv"),header=TRUE,row.names=1)
   d$fecundityd <- unlist(fecundity_d_h["d",])
   d$fecundityh <- unlist(fecundity_d_h["h",])
 
-  fecundity_Theta <- read.csv(paste0(path,"/fecundity_Theta.csv"),header=TRUE,row.names=1)
+  fecundity_Theta <- read.csv(paste0(path,"/fecundity_Theta_NOBA.csv"),header=TRUE,row.names=1)
   d$fecundityTheta <- format(as.matrix(fecundity_Theta),digits=5)
 
   # maturity
-  maturity <- read.csv(paste0(path,"/maturity_species.csv"),header=TRUE,row.names=1)
+  maturity <- read.csv(paste0(path,"/maturity_species_NOBA.csv"),header=TRUE,row.names=1)
   d$maturityNu <- unlist(maturity["nu",])
   d$maturityOmega <- unlist(maturity["omega",])
 
-  maturity_covEffects <- read.csv(paste0(path,"/maturity_covariateEffects.csv"),header=TRUE,row.names=1)
+  maturity_covEffects <- read.csv(paste0(path,"/maturity_covariateEffects_NOBA.csv"),header=TRUE,row.names=1)
   d$maturityCovEffects <- as.matrix(maturity_covEffects)
 
   # growth
@@ -220,7 +220,7 @@ get_DatData <- function(path){
   d$growthK <- unlist(growth["k",])
   d$growthType <- unlist(growth["growthType",])
 
-  growth_covEffects <- read.csv(paste0(path,"/growth_covariateEffects.csv"),header=TRUE,row.names=1)
+  growth_covEffects <- read.csv(paste0(path,"/growth_covariateEffects_NOBA.csv"),header=TRUE,row.names=1)
   d$growthCovEffects <- as.matrix(growth_covEffects)
 
   # intake
