@@ -243,7 +243,7 @@ write_DatFile <- function(dataList,listOfParameters) {
   cat("# init_matrix obs_survey_biomass(1,Nsurvey_obs,1,5)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("# survey year spp value cv",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   for (idata in 1:dataList$Nsurvey_obs){
-    cat(c(" ",dataList$observedBiomass[idata+1,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+    cat(c(" ",as.matrix(dataList$observedBiomass[idata+1,])),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   }
   cat("# end survey index observations ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
   cat("#  ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
@@ -255,7 +255,7 @@ write_DatFile <- function(dataList,listOfParameters) {
   cat("# init_matrix obs_survey_size(1,Nsurvey_size_obs,1,ncol) ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("# Survey  Year  Species Type (0=whole, 1=retained, 2=discard) InpN, proportion by length bin ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   for (idata in 1:dataList$Nsurvey_size_obs){
-    cat(c(" ",dataList$observedSurvSize[idata+1,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+    cat(c(" ",as.matrix(dataList$observedSurvSize[idata+1,])),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   }
   cat("# end survey length observations ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
   cat("#  ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
@@ -267,7 +267,7 @@ write_DatFile <- function(dataList,listOfParameters) {
   cat("# init_matrix obs_catch_biomass(1,Ncatch_obs,1,6) ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("# Fleet	Area	Year	Species	Catch(biomass t)	CV ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   for (idata in 1:dataList$Ncatch_obs){
-    cat(c(" ",dataList$observedCatch[idata+1,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+    cat(c(" ",as.matrix(dataList$observedCatch[idata+1,])),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   }
   cat("# end catch observations ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
   cat("#  ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
@@ -279,7 +279,7 @@ write_DatFile <- function(dataList,listOfParameters) {
   cat("# init_matrix obs_catch_size(1,Ncatch_size_obs,1,ncol) ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("# Fleet Area  Year  Species Type (0=whole, 1=retained, 2=discard) InpN, proportion by size bin ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   for (idata in 1:dataList$Ncatch_size_obs){
-    cat(c(" ",dataList$observedCatchSize[idata+1,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+    cat(c(" ",as.matrix(dataList$observedCatchSize[idata+1,])),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   }
   cat("# end fishery length observations ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
   cat("#  ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
@@ -291,7 +291,7 @@ write_DatFile <- function(dataList,listOfParameters) {
   cat("# init_matrix obs_dietprop(1,Ndietprop_obs,1,ncol) ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("# Survey  Year  Predator  Predator_size InpN  wt_prey_1 wt_prey_2 wt_prey_3 wt_prey_4 wt_prey_5 wt_prey_6 wt_prey_7 wt_prey_8 wt_prey_9 wt_prey_10 wt_prey_11 other ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   for (idata in 1:dataList$Ndietprop_obs){
-    cat(c(" ",dataList$observedSurvDiet[idata+1,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+    cat(c(" ",as.matrix(dataList$observedSurvDiet[idata+1,])),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   }
   cat("# end survey diet proportion observations ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
   cat("#  ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
