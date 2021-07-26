@@ -158,6 +158,7 @@ create_datpin_files <- function(listOfParameters,dataList){
 
   # write out dat file
   write_DatFile(dataList,listOfParameters)
+  write_tsDatFile(dataList,listOfParameters)
   write_PinFile(dataList,listOfParameters)
 
   return(dataList)
@@ -172,8 +173,9 @@ write_DatFile <- function(dataList,listOfParameters) {
   outPath <- paste0(listOfParameters$outDir,"/",listOfParameters$outputFilename)
   outputFileName <-  paste0(outPath,".dat")
   # write explanation of how this file was formed
-  cat("# This file was created using create_DataFile.R and used all inputs from csv files found in folder:
-      #createDataFiles_testing/dataInputsHydra",file=outputFileName,fill=listOfParameters$fillLength)
+  cat("# This file was created using create_datpin_files.R function write_DatFile
+      #and used all inputs from csv files found in folder:
+      #hydradata/data-raw",file=outputFileName,fill=listOfParameters$fillLength)
 
 
   # write all inputs to file with comment headers
@@ -235,66 +237,6 @@ write_DatFile <- function(dataList,listOfParameters) {
   for (icov in 1:dataList$NgrowthCov){
     cat(c(" ",dataList$growthCov[icov,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   }
-
-  # observed (survey) biomass
-  cat("# Survey index data ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("# Number of observations, init_int Nsurvey_obs",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat(c(" ",dataList$Nsurvey_obs),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("# init_matrix obs_survey_biomass(1,Nsurvey_obs,1,5)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("# survey year spp value cv",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  for (idata in 1:dataList$Nsurvey_obs){
-    cat(c(" ",as.matrix(dataList$observedBiomass[idata,])),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  }
-  cat("# end survey index observations ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
-  cat("#  ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
-  
-  # observed survey length composition
-  cat("# Survey size comp data ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("# Number of observations, init_int Nsurvey_size_obs ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat(c(" ",dataList$Nsurvey_size_obs),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("# init_matrix obs_survey_size(1,Nsurvey_size_obs,1,ncol) ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("# Survey  Year  Species Type (0=whole, 1=retained, 2=discard) InpN, proportion by length bin ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  for (idata in 1:dataList$Nsurvey_size_obs){
-    cat(c(" ",as.matrix(dataList$observedSurvSize[idata,])),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  }
-  cat("# end survey length observations ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
-  cat("#  ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
-  
-  # observed fishery catch
-  cat("# Fishery catch data ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("# Number of observations, init_int Ncatch_obs",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat(c(" ",dataList$Ncatch_obs),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("# init_matrix obs_catch_biomass(1,Ncatch_obs,1,6) ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("# Fleet	Area	Year	Species	Catch(biomass t)	CV ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  for (idata in 1:dataList$Ncatch_obs){
-    cat(c(" ",as.matrix(dataList$observedCatch[idata,])),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  }
-  cat("# end catch observations ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
-  cat("#  ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
-  
-  # observed fishery length composition
-  cat("# Fishery size comp data ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("# Number of observations, init_int Ncatch_size_obs ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat(c(" ",dataList$Ncatch_size_obs),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("# init_matrix obs_catch_size(1,Ncatch_size_obs,1,ncol) ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("# Fleet Area  Year  Species Type (0=whole, 1=retained, 2=discard) InpN, proportion by size bin ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  for (idata in 1:dataList$Ncatch_size_obs){
-    cat(c(" ",as.matrix(dataList$observedCatchSize[idata,])),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  }
-  cat("# end fishery length observations ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
-  cat("#  ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
-  
-  # observed survey diet composition
-  cat("# Survey diet proportion observations ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("# Number of observations, init_int Ndietprop_obs ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat(c(" ",dataList$Ndietprop_obs),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("# init_matrix obs_dietprop(1,Ndietprop_obs,1,ncol) ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("# Survey  Year  Predator  Predator_size InpN  wt_prey_1 wt_prey_2 wt_prey_3 wt_prey_4 wt_prey_5 wt_prey_6 wt_prey_7 wt_prey_8 wt_prey_9 wt_prey_10 wt_prey_11 other ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  for (idata in 1:dataList$Ndietprop_obs){
-    cat(c(" ",as.matrix(dataList$observedSurvDiet[idata,])),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  }
-  cat("# end survey diet proportion observations ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
-  cat("#  ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
   
   
   # observed effort
@@ -651,6 +593,76 @@ write_DatFile <- function(dataList,listOfParameters) {
 
 }
 
+write_tsDatFile <- function(dataList,listOfParameters) {
+  
+  outPath <- paste0(listOfParameters$outDir,"/",listOfParameters$outputFilename)
+  outputFileName <-  paste0(outPath,"-ts.dat")
+  # write explanation of how this file was formed
+  cat("# This file was created using create_datpin_files.R function write_tsDatFile
+      #and used all inputs from csv files found in folder:
+      #hydradata/data-raw",file=outputFileName,fill=listOfParameters$fillLength)
+  
+  # observed (survey) biomass
+  cat("# Survey index data ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# Number of observations, init_int Nsurvey_obs",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$Nsurvey_obs),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# init_matrix obs_survey_biomass(1,Nsurvey_obs,1,5)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# survey year spp value cv",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  for (idata in 1:dataList$Nsurvey_obs){
+    cat(c(" ",as.matrix(dataList$observedBiomass[idata,])),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  }
+  cat("# end survey index observations ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
+  cat("#  ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
+  
+  # observed survey length composition
+  cat("# Survey size comp data ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# Number of observations, init_int Nsurvey_size_obs ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$Nsurvey_size_obs),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# init_matrix obs_survey_size(1,Nsurvey_size_obs,1,ncol) ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# Survey  Year  Species Type (0=whole, 1=retained, 2=discard) InpN, proportion by length bin ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  for (idata in 1:dataList$Nsurvey_size_obs){
+    cat(c(" ",as.matrix(dataList$observedSurvSize[idata,])),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  }
+  cat("# end survey length observations ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
+  cat("#  ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
+  
+  # observed fishery catch
+  cat("# Fishery catch data ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# Number of observations, init_int Ncatch_obs",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$Ncatch_obs),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# init_matrix obs_catch_biomass(1,Ncatch_obs,1,6) ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# Fleet	Area	Year	Species	Catch(biomass t)	CV ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  for (idata in 1:dataList$Ncatch_obs){
+    cat(c(" ",as.matrix(dataList$observedCatch[idata,])),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  }
+  cat("# end catch observations ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
+  cat("#  ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
+  
+  # observed fishery length composition
+  cat("# Fishery size comp data ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# Number of observations, init_int Ncatch_size_obs ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$Ncatch_size_obs),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# init_matrix obs_catch_size(1,Ncatch_size_obs,1,ncol) ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# Fleet Area  Year  Species Type (0=whole, 1=retained, 2=discard) InpN, proportion by size bin ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  for (idata in 1:dataList$Ncatch_size_obs){
+    cat(c(" ",as.matrix(dataList$observedCatchSize[idata,])),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  }
+  cat("# end fishery length observations ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
+  cat("#  ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
+  
+  # observed survey diet composition
+  cat("# Survey diet proportion observations ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# Number of observations, init_int Ndietprop_obs ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$Ndietprop_obs),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# init_matrix obs_dietprop(1,Ndietprop_obs,1,ncol) ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# Survey  Year  Predator  Predator_size InpN  wt_prey_1 wt_prey_2 wt_prey_3 wt_prey_4 wt_prey_5 wt_prey_6 wt_prey_7 wt_prey_8 wt_prey_9 wt_prey_10 wt_prey_11 other ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  for (idata in 1:dataList$Ndietprop_obs){
+    cat(c(" ",as.matrix(dataList$observedSurvDiet[idata,])),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  }
+  cat("# end survey diet proportion observations ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
+  cat("#  ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE) 
+  
+}
 
 write_PinFile <- function(dataList,listOfParameters){
 
@@ -658,22 +670,31 @@ write_PinFile <- function(dataList,listOfParameters){
   outputFileName <-  paste0(outPath,".pin")
 
   # write explanation of how this file was formed
-  cat("#hydra_sim.pin for 10 species, 1 area (Georges Bank) for simulation, May 2013
-      #note that species 9 and 10 have changed from ms3am test model",file=outputFileName,fill=listOfParameters$fillLength)
-  cat("# This file was created using create_DataFile.R and used all inputs from csv files found in folder:
-      #createDataFiles_testing/dataInputsHydra",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # cat("#hydra_sim.pin for 10 species, 1 area (Georges Bank) for simulation, May 2013
+  #     #note that species 9 and 10 have changed from ms3am test model",file=outputFileName,fill=listOfParameters$fillLength)
+  cat("# This file was created using create_datpin_files.R function write_PinFile
+      #and used all inputs from csv files found in folder:
+      #hydradata/data-raw",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
 
-  cat("#species are based on pars from LeMANS model, see LeMANSpars_fortesting.xlsx and other lit values",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("#1: spinydog",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("#2: winterskate",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("#3: Aherring",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("#4: Acod",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("#5: haddock",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("#6: yellowtailfl",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("#7: winterfl",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("#8: Amackerel",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("#9: silverhake",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("#10: goosefish",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # cat("#species are based on pars from LeMANS model, see LeMANSpars_fortesting.xlsx and other lit values",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # cat("#1: spinydog",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # cat("#2: winterskate",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # cat("#3: Aherring",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # cat("#4: Acod",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # cat("#5: haddock",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # cat("#6: yellowtailfl",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # cat("#7: winterfl",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # cat("#8: Amackerel",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # cat("#9: silverhake",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # cat("#10: goosefish",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
+  # speciesList
+  cat("#",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# List of Species in Model",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  for (sp in dataList$speciesList) {
+    cat(c("#",sp),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  }
+  cat("#",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
 
   # year 1 initial values of N
   cat("#//Initial N year 1",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
@@ -695,7 +716,7 @@ write_PinFile <- function(dataList,listOfParameters){
   cat("#  init_matrix eggRicker_beta(1,Nareas,1,Nspecies)			//eggprod gamma Ricker model alpha ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat(c(" ",dataList$betaEggRicker),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
 
-  # redundant inputs recruitment Devs etc. never used.
+  # redundant inputs recruitment Devs etc. never used in simulation, used in estimation.
   cat("#  //recruitment: average annual, annual devs, actual (avg+dev)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("#  init_matrix avg_recruitment(1,Nareas,1,Nspecies,avg_rec_phase)  //average annual recruitment by area, species ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("#logspace (scaled by eye to produce flatline pops with pred mort but no fishing) ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)

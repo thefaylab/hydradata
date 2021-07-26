@@ -248,7 +248,7 @@ get_DatData <- function(path){
   d$fisherySelectivityd <- fisherySelectivityd
 
   # B0 - equilibrium biomass
-  B0 <- read.csv(paste0(path,"/B0.csv"),header=TRUE,row.names = 1)
+  B0 <- read.csv(paste0(path,"/B0_NOBA.csv"),header=TRUE,row.names = 1)
   d$B0 <- unlist(B0)
 
   # assessment thresholds + exploitations
@@ -260,11 +260,11 @@ get_DatData <- function(path){
   d$minMaxThresholds <- c(min(thresholds),max(thresholds))
 
   # additionl level added to species specific threshold
-  assessmentThresholdsSpecies <-  read.csv(paste0(path,"/assessmentThresholdsSpecies.csv"),header=TRUE,row.names = 1)
+  assessmentThresholdsSpecies <-  read.csv(paste0(path,"/assessmentThresholdsSpecies_NOBA.csv"),header=TRUE,row.names = 1)
   d$thresholdSpecies <- unlist(assessmentThresholdsSpecies)
 
   #scaled Efort - not used
-  scaledEffort <-  read.csv(paste0(path,"/observation_effortScaling.csv"),header=TRUE)
+  scaledEffort <-  read.csv(paste0(path,"/observation_effortScaling_NOBA.csv"),header=TRUE)
   d$scaledEffort <- unlist(scaledEffort)
 
   # discard coefficient - prob of discard
@@ -297,14 +297,14 @@ get_PinData <- function(path){
   p <- list()
   # path to data
   # list of species and guilds (Functional Groups)
-  Y1N <- read.csv(paste0(path,"/observation_Y1N.csv"),header=TRUE,row.names=1)
+  Y1N <- read.csv(paste0(path,"/observation_Y1N_NOBA.csv"),header=TRUE,row.names=1)
   p$Y1N <- Y1N
 
 
   # redundant Avg recruitemtn and deviations
-  redundantAvgRec <- read.csv(paste0(path,"/redundantAvgRecPinData.csv"),header=TRUE,row.names=1)
+  redundantAvgRec <- read.csv(paste0(path,"/AvgRecPinData_NOBA.csv"),header=TRUE,row.names=1)
   p$redundantAvgRec <- unlist(redundantAvgRec)
-  redundantRecDevs <- read.csv(paste0(path,"/redundantRecDevsPinData.csv"),header=TRUE,row.names=1)
+  redundantRecDevs <- read.csv(paste0(path,"/RecDevsPinData_NOBA.csv"),header=TRUE,row.names=1)
   p$redundantRecDevs <- unlist(t(as.matrix(redundantRecDevs)))
 
 
