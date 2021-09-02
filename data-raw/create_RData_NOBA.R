@@ -309,17 +309,17 @@ get_PinData <- function(path){
 
 
   # fishery catchability (q's)
-  fisheryqs<- read.csv(paste0(path,"/fishing_q.csv"),header=TRUE,row.names = 1)
+  fisheryqs<- read.csv(paste0(path,"/fishing_q_NOBA.csv"),header=TRUE,row.names = 1)
   p$fisheryq<- fisheryqs
 
 
   # survey q and obs error
-  survey<- read.csv(paste0(path,"/survey_info.csv"),header=TRUE,row.names = 1)
+  survey<- read.csv(paste0(path,"/survey_info_NOBA.csv"),header=TRUE,row.names = 1)
   p$surveyq<- unlist(survey["q",])
   p$surveySigma<- unlist(survey["obs_error",])
 
   # fishing error
-  fishery_sigma <- read.csv(paste0(path,"/fishing_error.csv"),header=TRUE,row.names = 1)
+  fishery_sigma <- read.csv(paste0(path,"/fishing_error_NOBA.csv"),header=TRUE,row.names = 1)
   p$fisherySigma <- fishery_sigma
 
   return(p)
