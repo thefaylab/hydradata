@@ -285,6 +285,15 @@ get_DatData <- function(path){
   # Autoregressive parameters for alternative error structure (AR) for survey, recruitment, catch
   ARparameters<- read.csv(paste0(path,"/observation_error.csv"),header=TRUE)
   d$ARParameters <- unlist(ARparameters)
+  
+  
+  # residence time in the modeled area
+  residenceTime <- read.csv(paste0(path,"/restime_NOBA.csv"),header=TRUE)
+  d$residenceTime <- unlist(residenceTime)
+  
+  # mortality rate outside the modeled area
+  areaMortality <- read.csv(paste0(path,"/outsidemort_NOBA.csv"),header=TRUE)
+  d$areaMortality <- unlist(areaMortality)
 
   return(d)
 
@@ -321,6 +330,7 @@ get_PinData <- function(path){
   # fishing error
   fishery_sigma <- read.csv(paste0(path,"/fishing_error_NOBA.csv"),header=TRUE,row.names = 1)
   p$fisherySigma <- fishery_sigma
+  
 
   return(p)
 }
