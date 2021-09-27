@@ -198,7 +198,7 @@ write_DatFile <- function(dataList,listOfParameters) {
 
   # id file with time series data
   cat("## Time series data file",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat(c(" ",paste0(outPath,"-ts.dat")),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",paste0(listOfParameters$outputFilename,"-ts.dat")),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
 
   # speciesList
   cat("#",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
