@@ -679,7 +679,7 @@ write_PinFile <- function(dataList,listOfParameters){
   #     #note that species 9 and 10 have changed from ms3am test model",file=outputFileName,fill=listOfParameters$fillLength)
   cat("# This file was created using create_datpin_files.R function write_PinFile
       #and used all inputs from csv files found in folder:
-      #hydradata/data-raw",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+      #hydradata/data-raw",file=outputFileName,fill=listOfParameters$fillLength)
 
   # cat("#species are based on pars from LeMANS model, see LeMANSpars_fortesting.xlsx and other lit values",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   # cat("#1: spinydog",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
