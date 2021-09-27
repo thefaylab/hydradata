@@ -195,6 +195,11 @@ write_DatFile <- function(dataList,listOfParameters) {
   cat(c(" ",dataList$Nsurveys),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("# init_number wtconv",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat(c(" ",dataList$wtconv),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+
+  # id file with time series data
+  cat("## Time series data file",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",paste0(outPath,"-ts.dat")),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+
   # speciesList
   cat("#",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("# List of Species in Model",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
