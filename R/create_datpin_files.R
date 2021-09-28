@@ -204,7 +204,7 @@ write_DatFile <- function(dataList,listOfParameters) {
   cat("#",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("# List of Species in Model",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   for (sp in dataList$speciesList) {
-    cat(c("#",sp),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+    cat(c("#", sp),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   }
   cat("#",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
 
@@ -697,7 +697,7 @@ write_PinFile <- function(dataList,listOfParameters){
   cat("#",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("# List of Species in Model",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   for (sp in dataList$speciesList) {
-    cat(c("#",sp),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+    cat(c("#", sp),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   }
   cat("#",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
 

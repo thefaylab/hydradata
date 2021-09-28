@@ -106,15 +106,15 @@ get_DatData <- function(path){
   # new long format
   obsBio <- read.csv(paste0(path,"/observation_biomass_NOBA_allsurvs.csv"),header=TRUE)
   d$Nsurvey_obs <- dim(obsBio)[1]
-  obsBio$survey <- as.numeric(obsBio$survey)
-  obsBio$species <- as.numeric(obsBio$species)
+  obsBio$survey <- as.numeric(as.factor(obsBio$survey))
+  obsBio$species <- as.numeric(as.factor(obsBio$species))
   d$observedBiomass <- obsBio 
   
   # observed survey size composition
   obsSurvSize <- read.csv(paste0(path,"/observation_lengths_NOBA_allsurvs.csv"),header=TRUE)
   d$Nsurvey_size_obs <- dim(obsSurvSize)[1]
-  obsSurvSize$survey <- as.numeric(obsSurvSize$survey)
-  obsSurvSize$species <- as.numeric(obsSurvSize$species)
+  obsSurvSize$survey <- as.numeric(as.factor(obsSurvSize$survey))
+  obsSurvSize$species <- as.numeric(as.factor(obsSurvSize$species))
   d$observedSurvSize <- obsSurvSize 
   
   # observed catch biomass
@@ -123,22 +123,22 @@ get_DatData <- function(path){
   # new long format
   obsCatch <- read.csv(paste0(path,"/observation_catch_NOBA_allfisheries.csv"),header=TRUE)
   d$Ncatch_obs <- dim(obsCatch)[1]
-  obsCatch$fishery <- as.numeric(obsCatch$fishery)
-  obsCatch$species <- as.numeric(obsCatch$species)
+  obsCatch$fishery <- as.numeric(as.factor(obsCatch$fishery))
+  obsCatch$species <- as.numeric(as.factor(obsCatch$species))
   d$observedCatch <- obsCatch
   
   # observed catch size composition
   obsCatchSize <- read.csv(paste0(path,"/observation_lengths_NOBA_allfisheries.csv"),header=TRUE)
   d$Ncatch_size_obs <- dim(obsCatchSize)[1]
-  obsCatchSize$fishery <- as.numeric(obsCatchSize$fishery)
-  obsCatchSize$species <- as.numeric(obsCatchSize$species)
+  obsCatchSize$fishery <- as.numeric(as.factor(obsCatchSize$fishery))
+  obsCatchSize$species <- as.numeric(as.factor(obsCatchSize$species))
   d$observedCatchSize <- obsCatchSize 
   
   # observed survey diet proportion by weight
   obsSurvDiet <- read.csv(paste0(path,"/observation_diets_NOBA_allsurvs.csv"),header=TRUE)
   d$Ndietprop_obs <- dim(obsSurvDiet)[1]
-  obsSurvDiet$survey <- as.numeric(obsSurvDiet$survey)
-  obsSurvDiet$species <- as.numeric(obsSurvDiet$species)
+  obsSurvDiet$survey <- as.numeric(as.factor(obsSurvDiet$survey))
+  obsSurvDiet$species <- as.numeric(as.factor(obsSurvDiet$species))
   obsSurvDiet$sizebin <- as.numeric(regmatches(obsSurvDiet$sizebin, regexpr("\\d+", obsSurvDiet$sizebin)))#take the number portion of sizebinN
   d$observedSurvDiet <- obsSurvDiet
   
@@ -295,6 +295,10 @@ get_DatData <- function(path){
   areaMortality <- read.csv(paste0(path,"/outsidemort_NOBA.csv"),header=TRUE)
   d$areaMortality <- unlist(areaMortality)
 
+  # replace NA
+  d <- lapply(d, function(x) {x[is.na(x)] <- -999; x})
+  
+  
   return(d)
 
 }
@@ -306,16 +310,17 @@ get_PinData <- function(path){
   p <- list()
   # path to data
   # list of species and guilds (Functional Groups)
-  Y1N <- read.csv(paste0(path,"/observation_Y1N_NOBA.csv"),header=TRUE,row.names=1)
+  Y1N <- read.csv(paste0(path,"/observation_Y1N_NOBA.csv"),header=TRUE)
   p$Y1N <- Y1N
 
 
-  # redundant Avg recruitemtn and deviations
+  # Avg recruitemnt and deviations
   redundantAvgRec <- read.csv(paste0(path,"/AvgRecPinData_NOBA.csv"),header=TRUE,row.names=1)
   p$redundantAvgRec <- unlist(redundantAvgRec)
   redundantRecDevs <- read.csv(paste0(path,"/RecDevsPinData_NOBA.csv"),header=TRUE,row.names=1)
   p$redundantRecDevs <- unlist(t(as.matrix(redundantRecDevs)))
 
+  
 
   # fishery catchability (q's)
   fisheryqs<- read.csv(paste0(path,"/fishing_q_NOBA.csv"),header=TRUE,row.names = 1)
@@ -331,6 +336,8 @@ get_PinData <- function(path){
   fishery_sigma <- read.csv(paste0(path,"/fishing_error_NOBA.csv"),header=TRUE,row.names = 1)
   p$fisherySigma <- fishery_sigma
   
-
+  # replace NA
+  p <- lapply(p, function(d) {d[is.na(d)] <- -999; d})
+  
   return(p)
 }
