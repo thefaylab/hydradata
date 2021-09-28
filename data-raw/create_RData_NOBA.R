@@ -38,14 +38,13 @@ get_DatData <- function(path){
   # path to data
   #path <- paste0(getwd(),"/",options$pathToDataFiles)
 
-  # list of species and guilds (Functional Groups)
+  # list of species and guilds (Functional Groups)hydr
   speciesList <- read.csv(paste0(path,"/speciesList_NOBA.csv"),header=TRUE)
   d$speciesList <- as.character(speciesList$species)
   d$guildNames <- as.character(speciesList$guild)
   d$numGuilds <- length(unique(d$guildNames))
   d$guildMembership <- speciesList$guildmember
   d$predOrPrey <- speciesList$predOrPrey
-
 
   singletons <- read.csv(paste0(path,"/singletons_NOBA.csv"),header=FALSE,row.names = 1)
   d$debugState <- singletons["debug",]
@@ -75,7 +74,6 @@ get_DatData <- function(path){
   d$flagMSE<- unlist(singletons["flagMSE",])
   d$flagLinearRamp <- unlist(singletons["flagLinearRamp",])
   d$baselineThreshold <- unlist(singletons["baseline_threshold",])
-
 
   # sizebin lengths
   binwidth <- read.csv(paste0(path,"/length_sizebins_NOBA.csv"),header=TRUE)
@@ -294,6 +292,12 @@ get_DatData <- function(path){
   # mortality rate outside the modeled area
   areaMortality <- read.csv(paste0(path,"/outsidemort_NOBA.csv"),header=TRUE)
   d$areaMortality <- unlist(areaMortality)
+  
+  # add missing vectors from sim not used in est
+  if(is.null(d$fleetMembership)) d$fleetMembership <- 1:d$Nfleets
+  if(is.null(d$minExploitation)) d$minExploitation <- rep(1e-05, d$Nfleets)
+  if(is.null(d$maxExploitation)) d$maxExploitation <- rep(1e-05, d$Nfleets)
+    
 
   # replace NA
   d <- lapply(d, function(x) {x[is.na(x)] <- -999; x})
@@ -310,7 +314,7 @@ get_PinData <- function(path){
   p <- list()
   # path to data
   # list of species and guilds (Functional Groups)
-  Y1N <- read.csv(paste0(path,"/observation_Y1N_NOBA.csv"),header=TRUE)
+  Y1N <- read.csv(paste0(path,"/observation_Y1N_NOBA.csv"),header=TRUE,row.names=1)
   p$Y1N <- Y1N
 
 
