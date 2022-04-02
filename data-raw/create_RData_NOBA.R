@@ -40,11 +40,14 @@ get_DatData <- function(path){
 
   # list of species and guilds (Functional Groups)hydr
   speciesList <- read.csv(paste0(path,"/speciesList_NOBA.csv"),header=TRUE)
-  d$speciesList <- as.character(speciesList$species)
+  # add species number to be used in writing hydra_est file
+  speciesList["speciesNum"] <- as.numeric(as.factor(speciesList$species))
+  d$speciesList <- as.character(speciesList$species) 
   d$guildNames <- as.character(speciesList$guild)
   d$numGuilds <- length(unique(d$guildNames))
   d$guildMembership <- speciesList$guildmember
   d$predOrPrey <- speciesList$predOrPrey
+  d$speciesNum <- speciesList$speciesNum
 
   singletons <- read.csv(paste0(path,"/singletons_NOBA.csv"),header=FALSE,row.names = 1)
   d$debugState <- singletons["debug",]
@@ -105,14 +108,14 @@ get_DatData <- function(path){
   obsBio <- read.csv(paste0(path,"/observation_biomass_NOBA_allsurvs.csv"),header=TRUE)
   d$Nsurvey_obs <- dim(obsBio)[1]
   obsBio$survey <- as.numeric(as.factor(obsBio$survey))
-  obsBio$species <- as.numeric(as.factor(obsBio$species))
+  obsBio$species <- speciesList$speciesNum[match(unlist(obsBio$species), speciesList$species)]
   d$observedBiomass <- obsBio 
   
   # observed survey size composition
   obsSurvSize <- read.csv(paste0(path,"/observation_lengths_NOBA_allsurvs.csv"),header=TRUE)
   d$Nsurvey_size_obs <- dim(obsSurvSize)[1]
   obsSurvSize$survey <- as.numeric(as.factor(obsSurvSize$survey))
-  obsSurvSize$species <- as.numeric(as.factor(obsSurvSize$species))
+  obsSurvSize$species <- speciesList$speciesNum[match(unlist(obsSurvSize$species), speciesList$species)]
   d$observedSurvSize <- obsSurvSize 
   
   # observed catch biomass
@@ -122,21 +125,21 @@ get_DatData <- function(path){
   obsCatch <- read.csv(paste0(path,"/observation_catch_NOBA_allfisheries.csv"),header=TRUE)
   d$Ncatch_obs <- dim(obsCatch)[1]
   obsCatch$fishery <- as.numeric(as.factor(obsCatch$fishery))
-  obsCatch$species <- as.numeric(as.factor(obsCatch$species))
+  obsCatch$species <- speciesList$speciesNum[match(unlist(obsCatch$species), speciesList$species)]
   d$observedCatch <- obsCatch
   
   # observed catch size composition
   obsCatchSize <- read.csv(paste0(path,"/observation_lengths_NOBA_allfisheries.csv"),header=TRUE)
   d$Ncatch_size_obs <- dim(obsCatchSize)[1]
   obsCatchSize$fishery <- as.numeric(as.factor(obsCatchSize$fishery))
-  obsCatchSize$species <- as.numeric(as.factor(obsCatchSize$species))
+  obsCatchSize$species <- speciesList$speciesNum[match(unlist(obsCatchSize$species), speciesList$species)]
   d$observedCatchSize <- obsCatchSize 
   
   # observed survey diet proportion by weight
   obsSurvDiet <- read.csv(paste0(path,"/observation_diets_NOBA_allsurvs.csv"),header=TRUE)
   d$Ndietprop_obs <- dim(obsSurvDiet)[1]
   obsSurvDiet$survey <- as.numeric(as.factor(obsSurvDiet$survey))
-  obsSurvDiet$species <- as.numeric(as.factor(obsSurvDiet$species))
+  obsSurvDiet$species <- speciesList$speciesNum[match(unlist(obsSurvDiet$species), speciesList$species)]
   obsSurvDiet$sizebin <- as.numeric(regmatches(obsSurvDiet$sizebin, regexpr("\\d+", obsSurvDiet$sizebin)))#take the number portion of sizebinN
   d$observedSurvDiet <- obsSurvDiet
   
@@ -278,7 +281,7 @@ get_DatData <- function(path){
 
   # fishery catchability indicator (q's)
   indicatorFisheryqs<- read.csv(paste0(path,"/fishing_q_indicator_NOBA.csv"),header=TRUE,row.names = 1)
-  d$indicatorFisheryq<- unlist(as.matrix(indicatorFisheryqs))
+  d$indicatorFisheryq<- unlist(as.matrix(t(indicatorFisheryqs)))
 
   # Autoregressive parameters for alternative error structure (AR) for survey, recruitment, catch
   ARparameters<- read.csv(paste0(path,"/observation_error.csv"),header=TRUE)
