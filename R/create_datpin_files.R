@@ -281,6 +281,7 @@ write_DatFile <- function(dataList,listOfParameters) {
   cat(c(" ",dataList$recphase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("#  init_int avg_rec_phase		//average recruitment estimation phase (could make species specific, currently global)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat(c(" ",dataList$avgRecPhase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+
   cat("#  init_int recsigmaphase			//st dev of recruitment devs phase",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat(c(" ",dataList$recsigmaphase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("#  init_int avg_F_phase			//average fishing mort estimation phase (could make species specific, currently global)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
