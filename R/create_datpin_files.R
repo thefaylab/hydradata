@@ -281,6 +281,8 @@ write_DatFile <- function(dataList,listOfParameters) {
   cat(c(" ",dataList$recphase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("#  init_int avg_rec_phase		//average recruitment estimation phase (could make species specific, currently global)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat(c(" ",dataList$avgRecPhase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("#  init_int recsigmaphase			//st dev of recruitment devs phase",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$recsigmaphase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("#  init_int avg_F_phase			//average fishing mort estimation phase (could make species specific, currently global)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat(c(" ",dataList$avgFPhase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("#  init_int dev_rec_phase		//recruitment deviation estimation phase (could make species specific, currently global)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
@@ -446,8 +448,8 @@ write_DatFile <- function(dataList,listOfParameters) {
 
   # fishery selectivity
   # need to reformat for cat function
-  fisherySelectc <- format(as.matrix(dataList$fisherySelectivityc),digits=5)
-  fisherySelectd <- format(as.matrix(dataList$fisherySelectivityd),digits=5)
+  #fisherySelectc <- format(as.matrix(dataList$fisherySelectivityc),digits=5)
+  #fisherySelectd <- format(as.matrix(dataList$fisherySelectivityd),digits=5)
 
   cat("#  //fishery selectivity pars from dat file, for now not area specific",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   #cat("#  init_matrix fishsel_c(1,Nspecies,1,Nfleets)  //fishery selectivity c par",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
@@ -456,7 +458,7 @@ write_DatFile <- function(dataList,listOfParameters) {
   # for (isp in 1:dataList$Nspecies) {
   #   cat(c(" ",fisherySelectc[isp,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   # }
-  cat(c(" ",dataList$fisherySelectc),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$fisherySelectivityc),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   
   #cat("#  init_matrix fishsel_d(1,Nspecies,1,Nfleets)  //fishery selectivity d par",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("#  init_matrix fishsel_d(1,Nfleets,1,Nspecies)  //fishery selectivity c par",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
@@ -464,7 +466,7 @@ write_DatFile <- function(dataList,listOfParameters) {
   # for (isp in 1:dataList$Nspecies) {
   #   cat(c(" ",fisherySelectd[isp,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   # }
-  cat(c(" ",dataList$fisherySelectd),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$fisherySelectivityd),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   
 
   # Following content added after ICES publication by Gaichas et al. 2014
