@@ -61,6 +61,7 @@ get_DatData <- function(path){
   d$yr1Nphase <- singletons["yr1Nphase",]
   d$recphase <- singletons["recphase",]
   d$avgRecPhase <- singletons["avg_rec_phase",]
+  d$recsigmaphase <- singletons["recsigmaphase",]
   d$avgFPhase <- singletons["avg_F_phase",]
   d$devRecPhase <- singletons["dev_rec_phase",]
   d$devFPhase <- singletons["dev_F_phase",]
@@ -244,9 +245,9 @@ get_DatData <- function(path){
 
   #fishery/fleet selectivity
   fisherySelectivityc<- read.csv(paste0(path,"/fishing_selectivityc_NOBA.csv"),header=TRUE,row.names = 1)
-  d$fisherySelectivityc <- fisherySelectivityc
+  d$fisherySelectivityc <- unlist(as.matrix(t(fisherySelectivityc)))
   fisherySelectivityd<- read.csv(paste0(path,"/fishing_selectivityd_NOBA.csv"),header=TRUE,row.names = 1)
-  d$fisherySelectivityd <- fisherySelectivityd
+  d$fisherySelectivityd <- unlist(as.matrix(t(fisherySelectivityd)))
 
   # B0 - equilibrium biomass
   B0 <- read.csv(paste0(path,"/B0_NOBA.csv"),header=TRUE,row.names = 1)
