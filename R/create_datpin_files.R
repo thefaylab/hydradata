@@ -486,7 +486,7 @@ write_DatFile <- function(dataList,listOfParameters) {
   cat(c("#Guild Membership guildMembership. "),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat(c(" ",dataList$guildMembership),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
 
-  cat(c("#Fleet Membership fleetMembers(1,Nfleets) "),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c("#Fleet Membership fleetMembers(1,Nguilds) "),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat(c(" ",dataList$fleetMembership),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
 
   # assessment thresholds and exploiation and step/linear ramp

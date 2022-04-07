@@ -298,7 +298,7 @@ get_DatData <- function(path){
   d$areaMortality <- unlist(areaMortality)
   
   # add missing vectors from sim not used in est
-  if(is.null(d$fleetMembership)) d$fleetMembership <- 1:d$Nfleets
+  if(is.null(d$fleetMembership)) d$fleetMembership <- 1:d$numGuilds
   if(is.null(d$minExploitation)) d$minExploitation <- rep(1e-05, d$Nfleets)
   if(is.null(d$maxExploitation)) d$maxExploitation <- rep(1e-05, d$Nfleets)
     
