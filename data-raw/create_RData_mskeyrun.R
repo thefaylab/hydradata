@@ -4,6 +4,8 @@
 # switch for simulated or real data
 # user specifies n bins, n fleets?
 
+library(magrittr)
+
 # Reuse Andy's functions
 create_RData_mskeyrun <- function(dattype = c("sim", "real"), 
                                   nlenbin = 5) {
@@ -19,19 +21,46 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
   }
 
   if(dattype == "real"){
-    focalspp <- mskeyrun::focalSpecies
-    survindex <- mskeyrun::surveyIndex
-    survlen <- mskeyrun::surveyLencomp
+    focalspp <- mskeyrun::focalSpecies %>%
+      dplyr::mutate(Name = modelName)
+    
+    survindex <- mskeyrun::surveyIndex %>%
+      dplyr::left_join(focalspp) %>%
+      dplyr::mutate(Name = modelName,
+                    year = YEAR,
+                    survey = SEASON)
+    
+    survlen <- mskeyrun::realSurveyLencomp
+    
     survdiet <- get_survDiet()
-    survtemp <- get_bottemp()
-    fishindex <- mskeyrun::catchIndex
+    
+    survtemp <- get_bottemp() #use ecodata
+    
+    fishindex <- mskeyrun::catchIndex%>%
+      dplyr::left_join(focalspp) %>%
+      dplyr::mutate(Name = modelName,
+                    year = YEAR,
+                    survey = SEASON)
+    
     fishlen <- mskeyrun::realFisheryLencomp
   }
   
   
   # read in data files associated with pin and dat file
-  d <- get_DatData(path)
-  p <- get_PinData(path)
+  d <- get_DatData_msk(focalspp,
+                       survindex,
+                       survlen,
+                       survdiet,
+                       survtemp,
+                       fishindex,
+                       fishlen)
+  p <- get_PinData_msk(focalspp,
+                       survindex,
+                       survlen,
+                       survdiet,
+                       survtemp,
+                       fishindex,
+                       fishlen)
   
   d$recName <- rep("segmented",d$Nspecies) # this is a hack. NEED to sort out data inputs
   
@@ -57,7 +86,13 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
 
 ## subfunctions get_pinData, get_DatData
 
-get_DatData <- function(path){
+get_DatData_msk <- function(focalspp,
+                            survindex,
+                            survlen,
+                            survdiet,
+                            survtemp,
+                            fishindex,
+                            fishlen){
   # We stipulate all of the input data needed to write to the .dat file
   # Eventually it will be better to read all of these in from text files or a GUI. For now this will suffice
   d <- list() # set up list for data storage
@@ -66,7 +101,11 @@ get_DatData <- function(path){
   #path <- paste0(getwd(),"/",options$pathToDataFiles)
   
   # list of species and guilds (Functional Groups)hydr
-  speciesList <- read.csv(paste0(path,"/speciesList_NOBA.csv"),header=TRUE)
+  speciesList <- focalspp[order(focalspp$Name),] %>%
+    dplyr::mutate(species = Name,
+                  guild = seq(1:length(Name)),
+                  guildmember = seq(1:length(Name)),)
+  
   # add species number to be used in writing hydra_est file
   speciesList["speciesNum"] <- as.numeric(as.factor(speciesList$species))
   d$speciesList <- as.character(speciesList$species) 
