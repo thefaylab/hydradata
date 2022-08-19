@@ -47,14 +47,16 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
   
   
   # read in data files associated with pin and dat file
-  d <- get_DatData_msk(focalspp,
+  d <- get_DatData_msk(nlenbin,
+                       focalspp,
                        survindex,
                        survlen,
                        survdiet,
                        survtemp,
                        fishindex,
                        fishlen)
-  p <- get_PinData_msk(focalspp,
+  p <- get_PinData_msk(nlenbin,
+                       focalspp,
                        survindex,
                        survlen,
                        survdiet,
@@ -86,7 +88,8 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
 
 ## subfunctions get_pinData, get_DatData
 
-get_DatData_msk <- function(focalspp,
+get_DatData_msk <- function(nlenbin,
+                            focalspp,
                             survindex,
                             survlen,
                             survdiet,
@@ -100,6 +103,22 @@ get_DatData_msk <- function(focalspp,
   # path to data
   #path <- paste0(getwd(),"/",options$pathToDataFiles)
   
+  predPrey <- survdiet %>%
+    dplyr::mutate(species = Name) %>%
+    dplyr::filter(prey %in% unique(species)) %>%
+    dplyr::select(species, agecl, year, prey, value) %>%
+    dplyr::group_by(species, prey) %>%
+    dplyr::summarise(avgpreyprop = mean(value)) 
+  
+  foodweb <- dplyr::left_join(focalspp, predPrey, by=c("Name" = "species")) %>%
+    dplyr::select(species=Name, prey, avgpreyprop) %>%
+    dplyr::mutate(avgpreyprop = ceiling(avgpreyprop)) %>%
+    tidyr::spread(species, avgpreyprop) %>%
+    dplyr::filter(!is.na(prey)) %>%
+    replace(is.na(.), 0)
+  
+  predOrPrey <- ifelse(colSums(foodweb[-1])>0, 1, 0)
+  
   # list of species and guilds (Functional Groups)hydr
   speciesList <- focalspp[order(focalspp$Name),] %>%
     dplyr::mutate(species = Name,
@@ -112,41 +131,76 @@ get_DatData_msk <- function(focalspp,
   d$guildNames <- as.character(speciesList$guild)
   d$numGuilds <- length(unique(d$guildNames))
   d$guildMembership <- speciesList$guildmember
-  d$predOrPrey <- speciesList$predOrPrey
+  d$predOrPrey <- unname(predOrPrey)
   d$speciesNum <- speciesList$speciesNum
   
-  singletons <- read.csv(paste0(path,"/singletons_NOBA.csv"),header=FALSE,row.names = 1)
-  d$debugState <- singletons["debug",]
-  d$Nyrs <- singletons["Nyrs",]
-  d$Nspecies <- singletons["Nspecies",]
-  d$Nsizebins <- singletons["Nsizebins",]
-  d$Nareas <- singletons["Nareas",]
-  d$Nfleets <- singletons["Nfleets",]
-  d$Nsurveys <- singletons["Nsurveys",]
-  d$wtconv <- singletons["wtconv",]
-  d$yr1Nphase <- singletons["yr1Nphase",]
-  d$recphase <- singletons["recphase",]
-  d$avgRecPhase <- singletons["avg_rec_phase",]
-  d$recsigmaphase <- singletons["recsigmaphase",]
-  d$avgFPhase <- singletons["avg_F_phase",]
-  d$devRecPhase <- singletons["dev_rec_phase",]
-  d$devFPhase <- singletons["dev_F_phase",]
-  d$fqphase <- singletons["fqphase",]
-  d$sqphase <- singletons["sqphase",]
-  d$ssigPhase <- singletons["ssig_phase",]
-  d$csigPhase <- singletons["csig_phase",]
-  d$phimax <- singletons["phimax",]
-  d$scaleInitialN <- singletons["scaleInitialN",]
-  d$otherFood <- singletons["otherFood",]
-  d$LFISize <- singletons["LFI_size",]
-  d$bandwidthMetric <- singletons["bandwidth_metric",]
-  d$assessmentPeriod <- unlist(singletons["assessmentPeriod",])
-  d$flagMSE<- unlist(singletons["flagMSE",])
-  d$flagLinearRamp <- unlist(singletons["flagLinearRamp",])
-  d$baselineThreshold <- unlist(singletons["baseline_threshold",])
+  # these are defaults, may be changed by user for different runs
+  #singletons <- read.csv(paste0(path,"/singletons_NOBA.csv"),header=FALSE,row.names = 1)
+  d$debugState <- 4
+  d$Nyrs <- max(length(unique(survindex$year)), length(unique(fishindex$year)))
+  d$Nspecies <- length(focalspp$Name)
+  d$Nsizebins <- nlenbin
+  d$Nareas <- 1
+  d$Nfleets <- 2
+  d$Nsurveys <- length(unique(survindex$survey))
+  d$wtconv <- 1
+  d$yr1Nphase <- 1
+  d$recphase <- -1
+  d$avgRecPhase <- 1
+  d$recsigmaphase <- -1
+  d$avgFPhase <- 1
+  d$devRecPhase <- 4
+  d$devFPhase <- 2
+  d$fqphase <- 1
+  d$fsphase <- 2
+  d$sqphase <- 1
+  d$ssphase <- 1
+  d$ssigPhase <- -1
+  d$csigPhase <- -1
+  d$phimax <- 1
+  d$scaleInitialN <- 1
+  d$otherFood <- 1e+09
+  d$LFISize <- 60
+  d$bandwidthMetric <- 5
+  d$assessmentPeriod <- 3
+  d$flagMSE<- 0
+  d$flagLinearRamp <- 1
+  d$baselineThreshold <- 0.2
   
-  # sizebin lengths
-  binwidth <- read.csv(paste0(path,"/length_sizebins_NOBA.csv"),header=TRUE)
+  # sizebin lengths--at present equal nlenbin increments across length range
+  # pull observed min and max size from data to optimize start and end bin
+  minmaxsurv <- survlen %>%
+    dplyr::group_by(Name) %>%
+    dplyr::summarise(minlen = min(lenbin, na.rm = TRUE),
+                     maxlen = max(lenbin, na.rm = TRUE),
+                     range = maxlen-minlen) 
+  minmaxfish <- fishlen %>%
+    dplyr::group_by(Name) %>%
+    dplyr::summarise(minlen = min(lenbin, na.rm = TRUE),
+                     maxlen = max(lenbin, na.rm = TRUE),
+                     range = maxlen-minlen) 
+  
+  maxLrange <- dplyr::bind_rows(minmaxsurv, minmaxfish) %>%
+    dplyr::group_by(Name) %>%
+    dplyr::summarise(minminL = min(minlen),
+                     maxmaxL = max(maxlen))
+  
+  equalbinwidths <- function(Lmax, Nsizebins){
+    bindef <- max(1,ceiling(Lmax/Nsizebins))
+    binwidths <- rep(bindef, Nsizebins)
+    return(binwidths)
+  }
+  
+  newbins <- maxLrange %>%
+    dplyr::group_by(Name) %>%
+    dplyr::group_modify(~broom::tidy(equalbinwidths(.$maxmaxL, d$Nsizebins))) %>%
+    dplyr::mutate(lb = paste0("sizebin",seq(1:d$Nsizebins))) %>%
+    tidyr::pivot_wider(names_from = lb, values_from = x)
+  
+  binwidth <- as.data.frame(newbins) %>%
+    dplyr::select(-Name, everything()) %>%
+    dplyr::rename('commentField-notused' = Name)
+  
   d$binwidth <- binwidth[1:d$Nspecies,1:d$Nsizebins]
   row.names(d$binwidth) <- binwidth[,ncol(binwidth)]
   
@@ -156,13 +210,14 @@ get_DatData_msk <- function(focalspp,
   d$lenwtb <- lenwt$b
   
   # covariate information relating to recruitment, growth and maturity
-  recruitmentCovs <- read.csv(paste0(path,"/recruitment_covariates_NOBA.csv"),header=TRUE)
-  maturityCovs <- read.csv(paste0(path,"/maturity_covariates_NOBA.csv"),header=TRUE)
-  growthCovs <- read.csv(paste0(path,"/growth_covariates_NOBA.csv"),header=TRUE)
+  # recruitmentCovs <- read.csv(paste0(path,"/recruitment_covariates_NOBA.csv"),header=TRUE)
+  # maturityCovs <- read.csv(paste0(path,"/maturity_covariates_NOBA.csv"),header=TRUE)
+  # growthCovs <- read.csv(paste0(path,"/growth_covariates_NOBA.csv"),header=TRUE)
   
-  d$recruitmentCov <- t(recruitmentCovs)
-  d$maturityCov <- t(maturityCovs)
-  d$growthCov <- t(growthCovs)
+  # not used in mskeyrun, dummy variables  
+  d$recruitmentCov <- rep(1, d$Nyrs)
+  d$maturityCov <- rep(1, d$Nyrs)
+  d$growthCov <- rep(1, d$Nyrs)
   # number of covariates
   d$NrecruitmentCov <- dim(d$recruitmentCov)[1]
   d$NmaturityCov <- dim(d$maturityCov)[1]
@@ -172,17 +227,19 @@ get_DatData_msk <- function(focalspp,
   #obsBio <- read.csv(paste0(path,"/observation_biomass_NOBA_BTS_fall_allbox_effic1.csv"),header=TRUE)
   #d$observedBiomass <- t(obsBio)
   # new long format
-  obsBio <- read.csv(paste0(path,"/observation_biomass_NOBA_allsurvs.csv"),header=TRUE)
+  obsBio <- survindex %>%
+    tidyr::pivot_wider(names_from = "variable", values_from = "value")
+  
   d$Nsurvey_obs <- dim(obsBio)[1]
   obsBio$survey <- as.numeric(as.factor(obsBio$survey))
-  obsBio$species <- speciesList$speciesNum[match(unlist(obsBio$species), speciesList$species)]
+  obsBio$species <- speciesList$speciesNum[match(unlist(obsBio$Name), speciesList$species)]
   d$observedBiomass <- obsBio 
   
   # observed survey size composition
-  obsSurvSize <- read.csv(paste0(path,"/observation_lengths_NOBA_allsurvs.csv"),header=TRUE)
+  obsSurvSize <- survlen
   d$Nsurvey_size_obs <- dim(obsSurvSize)[1]
   obsSurvSize$survey <- as.numeric(as.factor(obsSurvSize$survey))
-  obsSurvSize$species <- speciesList$speciesNum[match(unlist(obsSurvSize$species), speciesList$species)]
+  obsSurvSize$species <- speciesList$speciesNum[match(unlist(obsSurvSize$Name), speciesList$species)]
   d$observedSurvSize <- obsSurvSize 
   
   # observed catch biomass
