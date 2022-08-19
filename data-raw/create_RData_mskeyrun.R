@@ -228,7 +228,7 @@ get_DatData_msk <- function(nlenbin,
   #d$observedBiomass <- t(obsBio)
   # new long format
   obsBio <- survindex %>%
-    tidyr::pivot_wider(names_from = "variable", values_from = "value")
+    tidyr::pivot_wider(-units, names_from = "variable", values_from = "value")
   
   d$Nsurvey_obs <- dim(obsBio)[1]
   obsBio$survey <- as.numeric(as.factor(obsBio$survey))
@@ -236,7 +236,10 @@ get_DatData_msk <- function(nlenbin,
   d$observedBiomass <- obsBio 
   
   # observed survey size composition
-  obsSurvSize <- survlen
+  obsSurvSize <- survlen %>%
+    tidyr::pivot_wider(-units, names_from = "variable", values_from = "value")
+  
+  
   d$Nsurvey_size_obs <- dim(obsSurvSize)[1]
   obsSurvSize$survey <- as.numeric(as.factor(obsSurvSize$survey))
   obsSurvSize$species <- speciesList$speciesNum[match(unlist(obsSurvSize$Name), speciesList$species)]
