@@ -225,38 +225,39 @@ get_DatData_msk <- function(nlenbin,
   d$NgrowthCov <- dim(d$growthCov)[1]
   
   # observed survey biomass
-  #obsBio <- read.csv(paste0(path,"/observation_biomass_NOBA_BTS_fall_allbox_effic1.csv"),header=TRUE)
-  #d$observedBiomass <- t(obsBio)
   # new long format
   obsBio <- survindex %>%
-    tidyr::pivot_wider(-units, names_from = "variable", values_from = "value")
+    dplyr::mutate(species = Name) %>%
+    tidyr::pivot_wider(-units, names_from = "variable", values_from = "value") %>%
+    dplyr::select(survey, year, species, biomass, cv)
   
   d$Nsurvey_obs <- dim(obsBio)[1]
   obsBio$survey <- as.numeric(as.factor(obsBio$survey))
-  obsBio$species <- speciesList$speciesNum[match(unlist(obsBio$Name), speciesList$species)]
+  obsBio$species <- speciesList$speciesNum[match(unlist(obsBio$species), speciesList$species)]
   d$observedBiomass <- obsBio 
   
   # observed survey size composition
   modbins <- d$binwidth %>%
-    tibble::rownames_to_column("Name") %>%
-    tidyr::pivot_longer(!Name, names_to = "sizebin", values_to = "binwidth") %>%
-    dplyr::group_by(Name) %>%
+    tibble::rownames_to_column("species") %>%
+    tidyr::pivot_longer(!species, names_to = "sizebin", values_to = "binwidth") %>%
+    dplyr::group_by(species) %>%
     dplyr::mutate(modbin.min = pcumsum(binwidth),
                   modbin.max = cumsum(binwidth)) %>%
     dplyr::mutate(sizebin = factor(sizebin, levels = unique(sizebin))) 
   
   obsSurvSize <- survlen %>%
-    dplyr::select(Name,  year, survey, lenbin, value) %>%
+    dplyr::mutate(species = Name) %>%
+    dplyr::select(species,  year, survey, lenbin, value) %>%
     dplyr::left_join(modbins) %>%
     dplyr::filter(modbin.min <= lenbin & lenbin < modbin.max) %>% #lenbin defined as lower
-    dplyr::group_by(Name, year, survey, sizebin) %>%
+    dplyr::group_by(species, year, survey, sizebin) %>%
     dplyr::summarise(sumlen = sum(value)) %>%
     tidyr::spread(sizebin, sumlen) %>%
     dplyr::ungroup() %>%
     dplyr::mutate(inpN = rowSums(.[,-(1:3)], na.rm = TRUE)) %>%
     dplyr::mutate(type = 0) %>%
     dplyr::mutate(dplyr::across(c(dplyr::contains("sizebin")), ~./inpN)) %>%
-    dplyr::select(survey, year, Name, type, inpN, everything()) %>%
+    dplyr::select(survey, year, species, type, inpN, everything()) %>%
     dplyr::arrange(survey)
   
   # use -999 for missing value
@@ -268,14 +269,40 @@ get_DatData_msk <- function(nlenbin,
   
   d$Nsurvey_size_obs <- dim(obsSurvSize)[1]
   obsSurvSize$survey <- as.numeric(as.factor(obsSurvSize$survey))
-  obsSurvSize$species <- speciesList$speciesNum[match(unlist(obsSurvSize$Name), speciesList$species)]
+  obsSurvSize$species <- speciesList$speciesNum[match(unlist(obsSurvSize$species), speciesList$species)]
   d$observedSurvSize <- obsSurvSize 
   
   # observed catch biomass
-  #obsCatch <- read.csv(paste0(path,"/observation_catch_NOBA_census.csv"),header=TRUE)
-  #d$observedCatch <- t(obsCatch)
+  # need fleet defs first. the user may need to set these up
+  # WARNING currently hardcoded for 2 NOBA sim fleets
+  
+  fleetdef <- focalspp %>%
+    dplyr::mutate(species = Name) %>%
+    dplyr::arrange(species) %>%
+    dplyr::mutate(allcombined = dplyr::case_when(species %in% c("Long_rough_dab", "Polar_cod") ~ 0,
+                                          TRUE ~ 1)) %>%
+    dplyr::mutate(allbutcod = dplyr::case_when(species=="North_atl_cod" ~ 0,
+                                        TRUE ~ allcombined),
+                  codfleet = dplyr::case_when(species=="North_atl_cod" ~ 2,
+                                       TRUE ~ 0),
+                  qind = allbutcod + codfleet) %>%
+    dplyr::select(species, qind)
+  
   # new long format
-  obsCatch <- read.csv(paste0(path,"/observation_catch_NOBA_allfisheries.csv"),header=TRUE)
+  obsCatch <- fishindex %>%
+    dplyr::mutate(species = Name) %>%
+    tidyr::pivot_wider(-units, names_from = "variable", values_from = "value") %>%
+    dplyr::group_by(species) %>%
+    dplyr::mutate(totcatch = sum(catch)) %>%
+    dplyr::ungroup() %>%
+    dplyr::filter(totcatch > 0) %>%
+    dplyr::select(-totcatch) %>%
+    dplyr::mutate(area = 1) %>%
+    dplyr::left_join(fleetdef) %>%
+    dplyr::mutate(fishery = qind) %>%
+    dplyr::select(fishery, area, year, species, catch, cv) %>%
+    dplyr::arrange(fishery, species, year)
+  
   d$Ncatch_obs <- dim(obsCatch)[1]
   obsCatch$fishery <- as.numeric(as.factor(obsCatch$fishery))
   obsCatch$species <- speciesList$speciesNum[match(unlist(obsCatch$species), speciesList$species)]
