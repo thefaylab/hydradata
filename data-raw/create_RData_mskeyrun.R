@@ -340,14 +340,18 @@ get_DatData_msk <- function(nlenbin,
   # cap inpN at 1000
   obsCatchSize$inpN[obsCatchSize$inpN > 1000] <- 1000
   
-  
   d$Ncatch_size_obs <- dim(obsCatchSize)[1]
   obsCatchSize$fishery <- as.numeric(as.factor(obsCatchSize$fishery))
   obsCatchSize$species <- speciesList$speciesNum[match(unlist(obsCatchSize$species), speciesList$species)]
   d$observedCatchSize <- obsCatchSize 
   
   # observed survey diet proportion by weight
-  obsSurvDiet <- read.csv(paste0(path,"/observation_diets_NOBA_allsurvs.csv"),header=TRUE)
+  # need length at age to get diet at length
+  obsSurvDiet <- survdiet %>%
+    dplyr::mutate(species = Name) %>%
+    
+    
+    
   d$Ndietprop_obs <- dim(obsSurvDiet)[1]
   obsSurvDiet$survey <- as.numeric(as.factor(obsSurvDiet$survey))
   obsSurvDiet$species <- speciesList$speciesNum[match(unlist(obsSurvDiet$species), speciesList$species)]
