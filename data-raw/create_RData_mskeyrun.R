@@ -5,6 +5,7 @@
 # user specifies n bins, n fleets?
 
 library(magrittr)
+library(FSA)
 
 # Reuse Andy's functions
 create_RData_mskeyrun <- function(dattype = c("sim", "real"), 
@@ -236,9 +237,34 @@ get_DatData_msk <- function(nlenbin,
   d$observedBiomass <- obsBio 
   
   # observed survey size composition
-  obsSurvSize <- survlen %>%
-    tidyr::pivot_wider(-units, names_from = "variable", values_from = "value")
+  modbins <- d$binwidth %>%
+    tibble::rownames_to_column("Name") %>%
+    tidyr::pivot_longer(!Name, names_to = "sizebin", values_to = "binwidth") %>%
+    dplyr::group_by(Name) %>%
+    dplyr::mutate(modbin.min = pcumsum(binwidth),
+                  modbin.max = cumsum(binwidth)) %>%
+    dplyr::mutate(sizebin = factor(sizebin, levels = unique(sizebin))) 
   
+  obsSurvSize <- survlen %>%
+    dplyr::select(Name,  year, survey, lenbin, value) %>%
+    dplyr::left_join(modbins) %>%
+    dplyr::filter(modbin.min <= lenbin & lenbin < modbin.max) %>% #lenbin defined as lower
+    dplyr::group_by(Name, year, survey, sizebin) %>%
+    dplyr::summarise(sumlen = sum(value)) %>%
+    tidyr::spread(sizebin, sumlen) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(inpN = rowSums(.[,-(1:3)], na.rm = TRUE)) %>%
+    dplyr::mutate(type = 0) %>%
+    dplyr::mutate(dplyr::across(c(dplyr::contains("sizebin")), ~./inpN)) %>%
+    dplyr::select(survey, year, Name, type, inpN, everything()) %>%
+    dplyr::arrange(survey)
+  
+  # use -999 for missing value
+  obsSurvSize <- obsSurvSize %>%
+    replace(is.na(.),-999)
+  
+  # WARNING currently hardcoded cap inpN at 1000
+  obsSurvSize$inpN[obsSurvSize$inpN > 1000] <- 1000
   
   d$Nsurvey_size_obs <- dim(obsSurvSize)[1]
   obsSurvSize$survey <- as.numeric(as.factor(obsSurvSize$survey))
