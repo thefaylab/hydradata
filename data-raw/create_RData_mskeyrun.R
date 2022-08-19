@@ -309,7 +309,38 @@ get_DatData_msk <- function(nlenbin,
   d$observedCatch <- obsCatch
   
   # observed catch size composition
-  obsCatchSize <- read.csv(paste0(path,"/observation_lengths_NOBA_allfisheries.csv"),header=TRUE)
+  obsCatchSize <- fishlen %>%
+    dplyr::mutate(species = Name) %>%
+    dplyr::select(species,  year, lenbin, value) %>%
+    dplyr::left_join(modbins) %>%
+    dplyr::filter(modbin.min <= lenbin & lenbin < modbin.max) %>% #lenbin defined as lower
+    dplyr::group_by(species, year, sizebin) %>%
+    dplyr::summarise(sumlen = sum(value)) %>%
+    tidyr::spread(sizebin, sumlen) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(inpN = rowSums(.[,-(1:3)], na.rm = TRUE)) %>%
+    dplyr::mutate(type = 0) %>%
+    dplyr::left_join(fleetdef) %>%
+    dplyr::rename(fishery = qind) %>%
+    dplyr::mutate(area = 1) %>%
+    dplyr::mutate(dplyr::across(c(dplyr::contains("sizebin")), ~./inpN)) %>%
+    dplyr::select(fishery, area, year, species, type, inpN, everything()) %>%
+    dplyr::arrange(fishery, area, species, year)
+  
+  #add back columns with no lengths as NAs
+  missing <- setdiff(modbins$sizebin, names(obsCatchSize))
+  obsCatchSize[missing] <- NA_real_ 
+  colorder <- c("fishery", "area", "year", "species", "type", "inpN", levels(modbins$sizebin))
+  obsCatchSize <- obsCatchSize[colorder]
+  
+  # use -999 for missing value
+  obsCatchSize <- obsCatchSize %>%
+    replace(is.na(.),-999)
+  
+  # cap inpN at 1000
+  obsCatchSize$inpN[obsCatchSize$inpN > 1000] <- 1000
+  
+  
   d$Ncatch_size_obs <- dim(obsCatchSize)[1]
   obsCatchSize$fishery <- as.numeric(as.factor(obsCatchSize$fishery))
   obsCatchSize$species <- speciesList$speciesNum[match(unlist(obsCatchSize$species), speciesList$species)]
