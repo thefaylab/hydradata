@@ -15,8 +15,10 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     focalspp <- mskeyrun::simFocalSpecies
     survindex <- mskeyrun::simSurveyIndex
     survlen <- mskeyrun::simSurveyLencomp
+    survagelen <- mskeyrun::simSurveyAgeLencomp
     survdiet <- mskeyrun::simSurveyDietcomp
     survtemp <- mskeyrun::simSurveyBottemp
+    survbiopar <- mskeyrun::simBiolPar
     fishindex <- mskeyrun::simCatchIndex
     fishlen <- mskeyrun::simFisheryLencomp
   }
@@ -33,9 +35,13 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     
     survlen <- mskeyrun::realSurveyLencomp
     
-    survdiet <- get_survDiet()
+    survagelen <- NULL #diet already has length in it
+    
+    survdiet <- get_survDiet() # or put in mskeyrun
     
     survtemp <- get_bottemp() #use ecodata
+    
+    survbiolpar <- 
     
     fishindex <- mskeyrun::catchIndex%>%
       dplyr::left_join(focalspp) %>%
@@ -52,8 +58,10 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
                        focalspp,
                        survindex,
                        survlen,
+                       survagelen,
                        survdiet,
                        survtemp,
+                       survbiopar,
                        fishindex,
                        fishlen)
   p <- get_PinData_msk(nlenbin,
@@ -206,9 +214,12 @@ get_DatData_msk <- function(nlenbin,
   row.names(d$binwidth) <- binwidth[,ncol(binwidth)]
   
   # length to weight coefficients/parameters
-  lenwt <- read.csv(paste0(path,"/lengthweight_species_NOBA.csv"),header=TRUE)
-  d$lenwta <- lenwt$a
-  d$lenwtb <- lenwt$b
+  lenwt <- survbiopar %>%
+    dplyr::mutate(species = Name) %>%
+    dplyr::arrange(species)
+    
+  d$lenwta <- lenwt$WLa
+  d$lenwtb <- lenwt$WLb
   
   # covariate information relating to recruitment, growth and maturity
   # recruitmentCovs <- read.csv(paste0(path,"/recruitment_covariates_NOBA.csv"),header=TRUE)
@@ -346,10 +357,39 @@ get_DatData_msk <- function(nlenbin,
   d$observedCatchSize <- obsCatchSize 
   
   # observed survey diet proportion by weight
-  # need length at age to get diet at length
+  # need length comp by age to get diet at length
+  svagelenbin <- survagelen %>%
+    dplyr::mutate(species = Name) %>%
+    dplyr::select(species, year, survey, agecl, lenbin, value) %>%
+    dplyr::left_join(modbins) %>%
+    dplyr::filter(modbin.min <= lenbin & lenbin < modbin.max) %>% #lenbin defined as lower
+    dplyr::group_by(species, survey, year, agecl, sizebin) %>%
+    dplyr::summarise(sumlen = sum(value)) %>%
+    dplyr::group_by(species, year, sizebin) %>%
+    dplyr::mutate(propage = sumlen/sum(sumlen)) #proportion of each agecl contributing to lengthbin
+  
   obsSurvDiet <- survdiet %>%
     dplyr::mutate(species = Name) %>%
-    
+    dplyr::left_join(svagelenbin) %>%
+    dplyr::mutate(dietpropage = dietSamp*propage) %>% #reweight diets for lengthbins
+    dplyr::group_by(species, survey, year, sizebin, prey) %>%
+    dplyr::summarise(dietsize = sum(dietpropage)) %>%
+    dplyr::filter(prey %in% unique(modbins$species)) %>% #drops prey that aren't our modeled species
+    tidyr::spread(prey, dietsize) %>%
+    ungroup() %>%
+    dplyr::filter(!is.na(sizebin)) 
+  
+  # add back any modeled species that weren't prey so they show up as columns
+  missedpreds <- setdiff(unique(modbins$species), names(obsSurvDiet)[-(1:3)])
+  obsSurvDiet[missedpreds] <- NA_real_
+  obsSurvDiet[,-(1:3)] <- obsSurvDiet[unique(modbins$species)]
+  
+  obsSurvDiet <- obsSurvDiet %>% 
+    dplyr::mutate(allotherprey = 1-rowSums(.[,-(1:3)], na.rm = TRUE)) %>%
+    #dplyr::left_join(svalphamultlook) %>% #what is effective sample size for Dirichlet?
+    #dplyr::mutate(inpN = max(surv_alphamult_n/100000, 5)) %>% #rescale this input for now
+    dplyr::mutate(inpN = 100) %>% #hardcoded sample size, revisit
+    dplyr::select(survey, year, species, sizebin, inpN, everything())#, -surv_alphamult_n)
     
     
   d$Ndietprop_obs <- dim(obsSurvDiet)[1]
