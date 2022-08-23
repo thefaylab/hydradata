@@ -101,8 +101,10 @@ get_DatData_msk <- function(nlenbin,
                             focalspp,
                             survindex,
                             survlen,
+                            survagelen,
                             survdiet,
                             survtemp,
+                            survbiopar,
                             fishindex,
                             fishlen){
   # We stipulate all of the input data needed to write to the .dat file
@@ -357,6 +359,7 @@ get_DatData_msk <- function(nlenbin,
   d$observedCatchSize <- obsCatchSize 
   
   # observed survey diet proportion by weight
+  # for simulated diet! need different function for real diet that is by length
   # need length comp by age to get diet at length
   svagelenbin <- survagelen %>%
     dplyr::mutate(species = Name) %>%
@@ -371,26 +374,29 @@ get_DatData_msk <- function(nlenbin,
   obsSurvDiet <- survdiet %>%
     dplyr::mutate(species = Name) %>%
     dplyr::left_join(svagelenbin) %>%
-    dplyr::mutate(dietpropage = dietSamp*propage) %>% #reweight diets for lengthbins
+    dplyr::mutate(dietpropage = value*propage) %>% #reweight diets for lengthbins
     dplyr::group_by(species, survey, year, sizebin, prey) %>%
     dplyr::summarise(dietsize = sum(dietpropage)) %>%
     dplyr::filter(prey %in% unique(modbins$species)) %>% #drops prey that aren't our modeled species
     tidyr::spread(prey, dietsize) %>%
-    ungroup() %>%
+    dplyr::ungroup() %>%
     dplyr::filter(!is.na(sizebin)) 
   
   # add back any modeled species that weren't prey so they show up as columns
-  missedpreds <- setdiff(unique(modbins$species), names(obsSurvDiet)[-(1:3)])
+  missedpreds <- setdiff(unique(modbins$species), names(obsSurvDiet)[-(1:4)])
   obsSurvDiet[missedpreds] <- NA_real_
-  obsSurvDiet[,-(1:3)] <- obsSurvDiet[unique(modbins$species)]
+  obsSurvDiet[,-(1:4)] <- obsSurvDiet[unique(modbins$species)]
   
   obsSurvDiet <- obsSurvDiet %>% 
-    dplyr::mutate(allotherprey = 1-rowSums(.[,-(1:3)], na.rm = TRUE)) %>%
+    dplyr::mutate(allotherprey = 1-rowSums(.[,-(1:4)], na.rm = TRUE)) %>%
     #dplyr::left_join(svalphamultlook) %>% #what is effective sample size for Dirichlet?
     #dplyr::mutate(inpN = max(surv_alphamult_n/100000, 5)) %>% #rescale this input for now
-    dplyr::mutate(inpN = 100) %>% #hardcoded sample size, revisit
+    dplyr::mutate(inpN = 100) %>% #hardcoded simulated sample size, revisit
     dplyr::select(survey, year, species, sizebin, inpN, everything())#, -surv_alphamult_n)
-    
+  
+  # use -999 for missing value
+  obsSurvDiet <- obsSurvDiet %>%
+    replace(is.na(.),-999)
     
   d$Ndietprop_obs <- dim(obsSurvDiet)[1]
   obsSurvDiet$survey <- as.numeric(as.factor(obsSurvDiet$survey))
@@ -399,16 +405,27 @@ get_DatData_msk <- function(nlenbin,
   d$observedSurvDiet <- obsSurvDiet
   
   # observed effort by fleet (dummy, not used in estimation model)
-  obsEffort <- read.csv(paste0(path,"/observation_effort_NOBA.csv"),header=TRUE)
+  # also hardcoded for current 2 fleets
+  fleetnames <- c("allbutcod", "codfleet")
+  
+  obsEffort <- data.frame(1:d$Nyrs,
+                          matrix(1, d$Nyrs, d$Nfleets))
+  names(obsEffort) <- c("year", fleetnames)
+    
   d$observedEffort <- t(obsEffort)
   d$fleetNames <- (names(obsEffort)[2:(d$Nfleets+1)])
   
   # observed temperature
-  obsTemp <- read.csv(paste0(path,"/observation_temperature_NOBA_BTS_fall_allbox_effic1.csv"),header=TRUE)
+  # simulation using only fall: NOBA_BTS_fall_allbox_effic1
+  obsTemp <- survtemp %>%
+    dplyr::filter(survey=="BTS_fall_allbox_effic1") %>%
+    dplyr::select(year, meantemp=value)
+  
   d$observedTemperature <- t(obsTemp)
   
   # stomach weight
   stomachContent <- read.csv(paste0(path,"/intake_stomachContent_NOBA.csv"),header=TRUE)
+  
   d$intakeStomach <- as.matrix(stomachContent[,2:(d$Nsizebins+1)])
   
   # recruitment parameters
