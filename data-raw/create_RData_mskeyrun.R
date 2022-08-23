@@ -21,6 +21,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     survbiopar <- mskeyrun::simBiolPar
     fishindex <- mskeyrun::simCatchIndex
     fishlen <- mskeyrun::simFisheryLencomp
+    intake <- mskeyrun::simPerCapCons
   }
 
   if(dattype == "real"){
@@ -50,6 +51,8 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
                     survey = SEASON)
     
     fishlen <- mskeyrun::realFisheryLencomp
+    
+    intake <- get_intake() # or put in mskeyrun
   }
   
   
@@ -63,13 +66,11 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
                        survtemp,
                        survbiopar,
                        fishindex,
-                       fishlen)
+                       fishlen,
+                       intake)
   p <- get_PinData_msk(nlenbin,
                        focalspp,
-                       survindex,
                        survlen,
-                       survdiet,
-                       survtemp,
                        fishindex,
                        fishlen)
   
@@ -106,7 +107,8 @@ get_DatData_msk <- function(nlenbin,
                             survtemp,
                             survbiopar,
                             fishindex,
-                            fishlen){
+                            fishlen,
+                            intake){
   # We stipulate all of the input data needed to write to the .dat file
   # Eventually it will be better to read all of these in from text files or a GUI. For now this will suffice
   d <- list() # set up list for data storage
@@ -424,7 +426,20 @@ get_DatData_msk <- function(nlenbin,
   d$observedTemperature <- t(obsTemp)
   
   # stomach weight
-  stomachContent <- read.csv(paste0(path,"/intake_stomachContent_NOBA.csv"),header=TRUE)
+  # uses same length-age lookup as above to convert to length specific intake
+  stomachContent <- intake %>%
+    dplyr::mutate(species = Name) %>%
+    tidyr::pivot_wider(-units, names_from = "variable", values_from = "value")
+    dplyr::left_join(svagelenbin) %>%
+    dplyr::filter(!is.na(sizebin)) %>% # see note below
+    dplyr::mutate(conspropage = totconsagecl*propage) %>% #reweight cons for lengthbins
+    dplyr::mutate(totNpropage = totNagecl*propage) %>% #reweight nums for lengthbins
+    dplyr::group_by(species, time, sizebin) %>%
+    dplyr::summarise(intakesize = (sum(conspropage)/sum(totNpropage))*1000000) %>%
+    tidyr::complete(sizebin) %>% #adds back any missing sizebin factor levels
+    tidyr::spread(sizebin, intakesize) %>%
+    dplyr::ungroup()  
+  
   
   d$intakeStomach <- as.matrix(stomachContent[,2:(d$Nsizebins+1)])
   
