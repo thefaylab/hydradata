@@ -427,24 +427,64 @@ get_DatData_msk <- function(nlenbin,
   
   # stomach weight
   # uses same length-age lookup as above to convert to length specific intake
+  # takes mean across all years to get single vector
   stomachContent <- intake %>%
     dplyr::mutate(species = Name) %>%
-    tidyr::pivot_wider(-units, names_from = "variable", values_from = "value")
+    tidyr::pivot_wider(-units, names_from = "variable", values_from = "value") %>%
     dplyr::left_join(svagelenbin) %>%
     dplyr::filter(!is.na(sizebin)) %>% # see note below
     dplyr::mutate(conspropage = totconsagecl*propage) %>% #reweight cons for lengthbins
     dplyr::mutate(totNpropage = totNagecl*propage) %>% #reweight nums for lengthbins
-    dplyr::group_by(species, time, sizebin) %>%
+    dplyr::group_by(species, year, sizebin) %>%
     dplyr::summarise(intakesize = (sum(conspropage)/sum(totNpropage))*1000000) %>%
     tidyr::complete(sizebin) %>% #adds back any missing sizebin factor levels
     tidyr::spread(sizebin, intakesize) %>%
-    dplyr::ungroup()  
-  
+    dplyr::ungroup() %>% # stop here for individual year input
+    dplyr::group_by(species) %>%
+    dplyr::summarise(across(everything(), ~mean(.x, na.rm=T))) %>%
+    dplyr::select(-year) %>%
+    dplyr::rename_with(~gsub("bin", "class", .x)) %>% #stop here for unfilled
+    dplyr::mutate_all(~ifelse(is.nan(.), NA, .)) %>%
+    tidyr::pivot_longer(-species) %>%
+    dplyr::group_by(species) %>%
+    tidyr::fill(value, .direction = "updown") %>%
+    tidyr::pivot_wider()
   
   d$intakeStomach <- as.matrix(stomachContent[,2:(d$Nsizebins+1)])
   
-  # recruitment parameters
-  stockRecruit <- read.csv(paste0(path,"/recruitment_species_NOBA.csv"),header=TRUE,row.names=1)
+  # recruitment parameters, all dummy; not used in estimation model
+  stockRecruit <- matrix(1, 27, d$Nspecies,
+                         dimnames = list(c("eggRicker_alpha",
+                                           "eggRicker_shape",
+                                           "eggRicker_beta",
+                                           "DS_alpha",
+                                           "DS_shape",
+                                           "DS_beta",
+                                           "gamma_alpha",
+                                           "gamma_shape",
+                                           "gamma_beta",
+                                           "ricker_alpha",
+                                           "ricker_shape",
+                                           "ricker_beta",
+                                           "BH_alpha",
+                                           "BH_shape",
+                                           "BH_beta",
+                                           "shepherd_alpha",
+                                           "shepherd_shape",
+                                           "shepherd_beta",
+                                           "hockey_alpha",
+                                           "hockey_shape",
+                                           "hockey_beta",
+                                           "segmented_alpha",
+                                           "segmented_shape",
+                                           "segmented_beta",
+                                           "sigma",
+                                           "type",
+                                           "stochastic"
+                         ), c(sort.default(d$speciesList))
+                         ))
+  # change rectype input to 9=avg+devs
+  stockRecruit[c("type"),] <- 9
   
   d$alphaEggRicker <- unlist(stockRecruit["eggRicker_alpha",])
   d$shapeEggRicker <- unlist(stockRecruit["eggRicker_shape",])
@@ -476,28 +516,35 @@ get_DatData_msk <- function(nlenbin,
   d$recStochastic <- unlist(stockRecruit["stochastic",])
   
   
-  # sex ratio
-  sexRatio <- read.csv(paste0(path,"/sexratio_NOBA.csv"),header=TRUE,row.names=1)
+  # sex ratio assumed 50:50 for all
+  sexRatio <- matrix(0.5, 1, d$Nspecies,
+                     dimnames = list("ratio", c(sort.default(d$speciesList))))
   d$sexRatio <- unlist(sexRatio)
   
   # recruitment covariate effects. # columns = d$Nrecruitment_cov
-  rec_covEffects <- read.csv(paste0(path,"/recruitment_covariateEffects_NOBA.csv"),header=TRUE,row.names=1)
+  # not used in estimation model
+  rec_covEffects <- data.frame(name = c(sort.default(d$speciesList)), speciesEffect1 = 0)
   d$recruitCovEffects <- as.matrix(rec_covEffects)
   
-  # fecundity
-  fecundity_d_h <- read.csv(paste0(path,"/fecundity_species_NOBA.csv"),header=TRUE,row.names=1)
+  # fecundity all dummy variables not used in estimation model
+  fecundity_d_h <- matrix(1, 2, d$Nspecies,
+                          dimnames = list(c("d", "h"), c(sort.default(d$speciesList))))
   d$fecundityd <- unlist(fecundity_d_h["d",])
   d$fecundityh <- unlist(fecundity_d_h["h",])
   
-  fecundity_Theta <- read.csv(paste0(path,"/fecundity_Theta_NOBA.csv"),header=TRUE,row.names=1)
+  fecundity_Theta <- as.data.frame(matrix(0, d$Nspecies, d$Nsizebins, 
+                                          dimnames = list(c(sort.default(d$speciesList)),  
+                                                          c(paste0("sizeclass",seq(1:d$Nsizebins))))))
   d$fecundityTheta <- format(as.matrix(fecundity_Theta),digits=5)
   
-  # maturity
-  maturity <- read.csv(paste0(path,"/maturity_species_NOBA.csv"),header=TRUE,row.names=1)
+  # maturity all dummy variables not used in estimation model
+  maturity <- matrix(1, 2, d$Nspecies,
+                     dimnames = list(c("nu", "omega"), c(sort.default(d$speciesList))))
   d$maturityNu <- unlist(maturity["nu",])
   d$maturityOmega <- unlist(maturity["omega",])
   
-  maturity_covEffects <- read.csv(paste0(path,"/maturity_covariateEffects_NOBA.csv"),header=TRUE,row.names=1)
+  # dummy variables, no covariate effects in estimation model
+  maturity_covEffects <- data.frame(name = c(sort.default(d$speciesList)), speciesEffect1 = 0)
   d$maturityCovEffects <- as.matrix(maturity_covEffects)
   
   # growth
@@ -508,24 +555,38 @@ get_DatData_msk <- function(nlenbin,
   d$growthK <- unlist(growth["k",])
   d$growthType <- unlist(growth["growthType",])
   
-  growth_covEffects <- read.csv(paste0(path,"/growth_covariateEffects_NOBA.csv"),header=TRUE,row.names=1)
+  # dummy variables, no covariate effects in estimation model
+  growth_covEffects <- data.frame(name = c(sort.default(d$speciesList)), speciesEffect1 = 0)
   d$growthCovEffects <- as.matrix(growth_covEffects)
   
-  # intake
-  intake <- read.csv(paste0(path,"/intake_species_NOBA.csv"),header=TRUE,row.names=1)
+  # intake: fixed parameters for all species
+  intake <- rbind(species = sort.default(d$speciesList),
+                  alpha = rep(0.004),
+                  beta = rep(0.11))
+  colnames(intake) <- intake[1,]
+  intake <- as.data.frame(intake[-1,])
+  
   d$intakeAlpha <- unlist(intake["alpha",])
   d$intakeBeta <- unlist(intake["beta",])
   
   # M1
-  M1 <- read.csv(paste0(path,"/mortality_M1_NOBA.csv"),header=TRUE,row.names = 1)
+  M1 <- as.data.frame(matrix(0.02, d$Nspecies, d$Nsizebins, 
+                             dimnames = list(c(sort.default(d$speciesList)),  
+                                             c(paste0("sizeclass",seq(1:d$Nsizebins)))))) 
   d$M1 <- as.matrix(M1)
   
-  #foodweb
-  foodweb <- read.csv(paste0(path,"/foodweb_NOBA.csv"),header=TRUE,row.names = 1)
+  #foodweb, object created above
+  rownames(foodweb) <- foodweb[,1]
+  foodweb[,1] <- NULL
   d$foodweb <- as.matrix(foodweb)
   
   #M2 size preference
-  M2sizePref <- read.csv(paste0(path,"/mortality_M2sizePreference_NOBA.csv"),header=TRUE,row.names = 1)
+  M2sizePref <- rbind(species = sort.default(d$speciesList),
+                      mu = as.numeric(rep(0.5)),
+                      sigma = as.numeric(rep(2)))
+  colnames(M2sizePref) <- M2sizePref[1,]
+  M2sizePref <- as.data.frame(M2sizePref[-1,])
+  
   d$M2sizePrefMu <- as.matrix(M2sizePref["mu",])
   d$M2sizePrefSigma <- as.matrix(M2sizePref["sigma",])
   
