@@ -57,10 +57,16 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     percapcons <- get_percapcons() # or put in mskeyrun
   }
   
+  # calculate model length bins for both pin and dat
+  bindef <- get_modbins(nlenbin,
+                        focalspp,
+                        survlen,
+                        fishlen)
   
   # read in data files associated with pin and dat file
   d <- get_DatData_msk(nlenbin,
                        focalspp,
+                       bindef,
                        survindex,
                        survlen,
                        survagelen,
@@ -73,9 +79,8 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
                        path)
   p <- get_PinData_msk(nlenbin,
                        focalspp,
-                       survlen,
-                       fishindex,
-                       fishlen,
+                       bindef,
+                       startpars,
                        path)
   
   d$recName <- rep("segmented",d$Nspecies) # this is a hack. NEED to sort out data inputs
@@ -100,10 +105,71 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
   
 }
 
-## subfunctions get_pinData, get_DatData
+## subfunctions get_modbins,get_pinData, get_DatData
+
+get_modbins <- function(nlenbin,
+                        focalspp,
+                        survlen,
+                        fishlen){
+  # sizebin lengths--at present equal nlenbin increments across length range
+  # pull observed min and max size from data to optimize start and end bin
+  b <- list()
+  
+  Nsizebins <- nlenbin
+  Nspecies <- length(focalspp$Name)
+  
+  minmaxsurv <- survlen %>%
+    dplyr::group_by(Name) %>%
+    dplyr::summarise(minlen = min(lenbin, na.rm = TRUE),
+                     maxlen = max(lenbin, na.rm = TRUE),
+                     range = maxlen-minlen) 
+  minmaxfish <- fishlen %>%
+    dplyr::group_by(Name) %>%
+    dplyr::summarise(minlen = min(lenbin, na.rm = TRUE),
+                     maxlen = max(lenbin, na.rm = TRUE),
+                     range = maxlen-minlen) 
+  
+  maxLrange <- dplyr::bind_rows(minmaxsurv, minmaxfish) %>%
+    dplyr::group_by(Name) %>%
+    dplyr::summarise(minminL = min(minlen),
+                     maxmaxL = max(maxlen))
+  
+  equalbinwidths <- function(Lmax, Nsizebins){
+    bindef <- max(1,ceiling(Lmax/Nsizebins))
+    binwidths <- rep(bindef, Nsizebins)
+    return(binwidths)
+  }
+  
+  newbins <- maxLrange %>%
+    dplyr::group_by(Name) %>%
+    dplyr::group_modify(~broom::tidy(equalbinwidths(.$maxmaxL, Nsizebins))) %>%
+    dplyr::mutate(lb = paste0("sizebin",seq(1:Nsizebins))) %>%
+    tidyr::pivot_wider(names_from = lb, values_from = x)
+  
+  binwidth <- as.data.frame(newbins) %>%
+    dplyr::select(-Name, everything()) %>%
+    dplyr::rename('commentField-notused' = Name)
+  
+  b$binwidth <- binwidth[1:Nspecies,1:Nsizebins]
+  row.names(bindef$binwidth) <- binwidth[,ncol(binwidth)]
+  
+  modbins <- b$binwidth %>%
+    tibble::rownames_to_column("species") %>%
+    tidyr::pivot_longer(!species, names_to = "sizebin", values_to = "binwidth") %>%
+    dplyr::group_by(species) %>%
+    dplyr::mutate(modbin.min = pcumsum(binwidth),
+                  modbin.max = cumsum(binwidth)) %>%
+    dplyr::mutate(sizebin = factor(sizebin, levels = unique(sizebin))) 
+  
+  b$modbins <- modbins
+  
+  return(b)
+  
+}
 
 get_DatData_msk <- function(nlenbin,
                             focalspp,
+                            bindef,
                             survindex,
                             survlen,
                             survagelen,
@@ -185,42 +251,44 @@ get_DatData_msk <- function(nlenbin,
   d$flagLinearRamp <- 1
   d$baselineThreshold <- 0.2
   
-  # sizebin lengths--at present equal nlenbin increments across length range
-  # pull observed min and max size from data to optimize start and end bin
-  minmaxsurv <- survlen %>%
-    dplyr::group_by(Name) %>%
-    dplyr::summarise(minlen = min(lenbin, na.rm = TRUE),
-                     maxlen = max(lenbin, na.rm = TRUE),
-                     range = maxlen-minlen) 
-  minmaxfish <- fishlen %>%
-    dplyr::group_by(Name) %>%
-    dplyr::summarise(minlen = min(lenbin, na.rm = TRUE),
-                     maxlen = max(lenbin, na.rm = TRUE),
-                     range = maxlen-minlen) 
+  # # sizebin lengths--at present equal nlenbin increments across length range
+  # # pull observed min and max size from data to optimize start and end bin
+  # minmaxsurv <- survlen %>%
+  #   dplyr::group_by(Name) %>%
+  #   dplyr::summarise(minlen = min(lenbin, na.rm = TRUE),
+  #                    maxlen = max(lenbin, na.rm = TRUE),
+  #                    range = maxlen-minlen) 
+  # minmaxfish <- fishlen %>%
+  #   dplyr::group_by(Name) %>%
+  #   dplyr::summarise(minlen = min(lenbin, na.rm = TRUE),
+  #                    maxlen = max(lenbin, na.rm = TRUE),
+  #                    range = maxlen-minlen) 
+  # 
+  # maxLrange <- dplyr::bind_rows(minmaxsurv, minmaxfish) %>%
+  #   dplyr::group_by(Name) %>%
+  #   dplyr::summarise(minminL = min(minlen),
+  #                    maxmaxL = max(maxlen))
+  # 
+  # equalbinwidths <- function(Lmax, Nsizebins){
+  #   bindef <- max(1,ceiling(Lmax/Nsizebins))
+  #   binwidths <- rep(bindef, Nsizebins)
+  #   return(binwidths)
+  # }
+  # 
+  # newbins <- maxLrange %>%
+  #   dplyr::group_by(Name) %>%
+  #   dplyr::group_modify(~broom::tidy(equalbinwidths(.$maxmaxL, d$Nsizebins))) %>%
+  #   dplyr::mutate(lb = paste0("sizebin",seq(1:d$Nsizebins))) %>%
+  #   tidyr::pivot_wider(names_from = lb, values_from = x)
+  # 
+  # binwidth <- as.data.frame(newbins) %>%
+  #   dplyr::select(-Name, everything()) %>%
+  #   dplyr::rename('commentField-notused' = Name)
+  # 
+  # d$binwidth <- binwidth[1:d$Nspecies,1:d$Nsizebins]
+  # row.names(d$binwidth) <- binwidth[,ncol(binwidth)]
   
-  maxLrange <- dplyr::bind_rows(minmaxsurv, minmaxfish) %>%
-    dplyr::group_by(Name) %>%
-    dplyr::summarise(minminL = min(minlen),
-                     maxmaxL = max(maxlen))
-  
-  equalbinwidths <- function(Lmax, Nsizebins){
-    bindef <- max(1,ceiling(Lmax/Nsizebins))
-    binwidths <- rep(bindef, Nsizebins)
-    return(binwidths)
-  }
-  
-  newbins <- maxLrange %>%
-    dplyr::group_by(Name) %>%
-    dplyr::group_modify(~broom::tidy(equalbinwidths(.$maxmaxL, d$Nsizebins))) %>%
-    dplyr::mutate(lb = paste0("sizebin",seq(1:d$Nsizebins))) %>%
-    tidyr::pivot_wider(names_from = lb, values_from = x)
-  
-  binwidth <- as.data.frame(newbins) %>%
-    dplyr::select(-Name, everything()) %>%
-    dplyr::rename('commentField-notused' = Name)
-  
-  d$binwidth <- binwidth[1:d$Nspecies,1:d$Nsizebins]
-  row.names(d$binwidth) <- binwidth[,ncol(binwidth)]
+  d$binwidth <- bindef$binwidth
   
   # length to weight coefficients/parameters
   lenwt <- survbiopar %>%
@@ -257,13 +325,15 @@ get_DatData_msk <- function(nlenbin,
   d$observedBiomass <- obsBio 
   
   # observed survey size composition
-  modbins <- d$binwidth %>%
-    tibble::rownames_to_column("species") %>%
-    tidyr::pivot_longer(!species, names_to = "sizebin", values_to = "binwidth") %>%
-    dplyr::group_by(species) %>%
-    dplyr::mutate(modbin.min = pcumsum(binwidth),
-                  modbin.max = cumsum(binwidth)) %>%
-    dplyr::mutate(sizebin = factor(sizebin, levels = unique(sizebin))) 
+  # modbins <- d$binwidth %>%
+  #   tibble::rownames_to_column("species") %>%
+  #   tidyr::pivot_longer(!species, names_to = "sizebin", values_to = "binwidth") %>%
+  #   dplyr::group_by(species) %>%
+  #   dplyr::mutate(modbin.min = pcumsum(binwidth),
+  #                 modbin.max = cumsum(binwidth)) %>%
+  #   dplyr::mutate(sizebin = factor(sizebin, levels = unique(sizebin))) 
+  
+  modbins <- bindef$modbins
   
   obsSurvSize <- survlen %>%
     dplyr::mutate(species = Name) %>%
@@ -676,19 +746,36 @@ get_DatData_msk <- function(nlenbin,
 
 get_PinData_msk <- function(nlenbin,
                             focalspp,
-                            survlen,
-                            fishindex,
-                            fishlen,
+                            bindef,
+                            startpars,
                             path){
   # Stipulate all information required for the pin data file
   p <- list()
   # path to data
-  # list of species and guilds (Functional Groups)
-  Y1N <- read.csv(paste0(path,"/observation_Y1N_NOBA.csv"),header=TRUE,row.names=1)
+  # list of species and guilds (Functional Groups)'
+  
+  modbins <- bindef$modbins
+  
+  # starting length structure
+  Y1N <- startpars %>%
+  
+    dplyr::filter(startlengths)%>%
+    dplyr::left_join(modbins) %>%
+    dplyr::filter(modbin.min < upper.bins & upper.bins <= modbin.max) %>%
+    dplyr::group_by(species, sizebin) %>%
+    dplyr::summarise(sumlen = log(sum(atoutput)/1000000)) %>%
+    tidyr::spread(sizebin, sumlen) %>%
+    ungroup() %>%
+    replace(is.na(.),0) %>% # use 0 for missing value in pin file
+    select(-species) %>%
+    as.matrix()
+  
+  rownames(modstartNlen) = sort.default(sppsubset$Name)
+  
   p$Y1N <- Y1N
   
   
-  # Avg recruitemnt and deviations
+  # Avg recruitment and deviations
   redundantAvgRec <- read.csv(paste0(path,"/AvgRecPinData_NOBA.csv"),header=TRUE,row.names=1)
   p$redundantAvgRec <- unlist(redundantAvgRec)
   redundantRecDevs <- read.csv(paste0(path,"/RecDevsPinData_NOBA.csv"),header=TRUE,row.names=1)
