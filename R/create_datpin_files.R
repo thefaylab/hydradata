@@ -160,6 +160,7 @@ create_datpin_files <- function(listOfParameters,dataList){
   write_DatFile(dataList,listOfParameters)
   write_tsDatFile(dataList,listOfParameters)
   write_PinFile(dataList,listOfParameters)
+  write_estPinFile(dataList,listOfParameters)
 
   return(dataList)
 
@@ -685,10 +686,11 @@ write_tsDatFile <- function(dataList,listOfParameters) {
   
 }
 
+# retain structure for simulation pin file below, writes file with -sim appended
 write_PinFile <- function(dataList,listOfParameters){
 
   outPath <- paste0(listOfParameters$outDir,"/",listOfParameters$outputFilename)
-  outputFileName <-  paste0(outPath,".pin")
+  outputFileName <-  paste0(outPath,"-sim.pin")
 
   # write explanation of how this file was formed
   # cat("#hydra_sim.pin for 10 species, 1 area (Georges Bank) for simulation, May 2013
@@ -780,3 +782,65 @@ write_PinFile <- function(dataList,listOfParameters){
 
 }
 
+write_estPinFile <- function(dataList,listOfParameters){
+  outPath <- paste0(listOfParameters$outDir,"/",listOfParameters$outputFilename)
+  outputFileName <-  paste0(outPath,".pin")
+  
+  # write explanation of how this file was formed
+  cat("# This file was created using create_datpin_files.R function write_estPinFile
+      #and used inputs from create_Rdata_mskeyrun and csv files found in folder:
+      #hydradata/data-raw",file=outputFileName,fill=listOfParameters$fillLength)
+  
+  # speciesList
+  cat("#",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# List of Species in Model",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  for (sp in dataList$speciesList) {
+    cat(c("#", sp),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  }
+  cat("#",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
+  # year 1 initial values of N
+  cat("#//Initial N year 1",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("#  init_3darray yr1N(1,Nareas,1,Nspecies,1,Nsizebins)       //initial year N at size, millions",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
+  # need to reformat for cat function
+  Y1Nformat <- format(as.matrix(dataList$Y1N),digits=7)
+  for (sp in 1:dataList$Nspecies) {
+    cat(c(" ",Y1Nformat[sp,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  }
+  
+  # recruitment_alpha, shape, and beta vectors 1:Nspecies filled with 0s for now
+  cat("# recruitment_alpha, 1:Nspecies:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+
+  cat("# recruitment_shape, 1:Nspecies:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+
+  cat("# recruitment_beta, 1:Nspecies:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
+  # ln_avg_recruitment, vector 1:species
+  cat("# ln_avg_recruitment, 1:Nspecies:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
+  # recruitment_devs, matrix 1:Nspecies rows, 1:Nyrs columns filled with 0s
+  cat("# recruitment_devs, rows 1:Nspecies, columns 1:Nyrs:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
+  # ln_recsigma, vector 1:Nspecies, filled with 1s
+  cat("# ln_recsigma, 1:Nspecies:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
+  # avg_F, vector 1:Nfleets
+  cat("# avg_F, 1:fleets:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
+  # F_devs, matrix 1:Nfleets rows, 1:Nyrs columns filled with 0s
+  cat("# F_devs, rows 1:fleets, columns 1:Nyrs:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
+  # fishsel_pars, matrix fishsel c and d, 1:Nfleets
+  cat("# fishsel_pars, 1:Nspecies:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
+  # ln_fishery_q: 1:Nspecies
+  cat("# ln_fishery_q, 1:Nspecies:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
+  # survey_selpars, matrix survsel c and d, 1:Nfleets
+  cat("# survey_selpars, 1:Nspecies:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
+  # ln_survey_q: 1:Nsurveys rows, 1:Nspecies columns
+  cat("# ln_survey_q, rows 1:Nsurveys, columns 1:Nspecies:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
+}
