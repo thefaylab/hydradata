@@ -11,6 +11,8 @@ library(FSA)
 create_RData_mskeyrun <- function(dattype = c("sim", "real"), 
                                   nlenbin = 5) {
   
+  path <- "data-raw" #will still read in some csvs
+  
   if(dattype == "sim"){
     focalspp <- mskeyrun::simFocalSpecies
     survindex <- mskeyrun::simSurveyIndex
@@ -21,7 +23,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     survbiopar <- mskeyrun::simBiolPar
     fishindex <- mskeyrun::simCatchIndex
     fishlen <- mskeyrun::simFisheryLencomp
-    intake <- mskeyrun::simPerCapCons
+    percapcons <- mskeyrun::simPerCapCons
   }
 
   if(dattype == "real"){
@@ -52,7 +54,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     
     fishlen <- mskeyrun::realFisheryLencomp
     
-    intake <- get_intake() # or put in mskeyrun
+    percapcons <- get_percapcons() # or put in mskeyrun
   }
   
   
@@ -67,18 +69,20 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
                        survbiopar,
                        fishindex,
                        fishlen,
-                       intake)
+                       percapcons,
+                       path)
   p <- get_PinData_msk(nlenbin,
                        focalspp,
                        survlen,
                        fishindex,
-                       fishlen)
+                       fishlen,
+                       path)
   
   d$recName <- rep("segmented",d$Nspecies) # this is a hack. NEED to sort out data inputs
   
   # add all of fields to hydraData
-  hydraDataList <- d
-  hydraDataList <- modifyList(hydraDataList,p)
+  hydraDataList_msk <- d
+  hydraDataList_msk <- modifyList(hydraDataList_msk,p)
   
   # save each one as an RData file to lazily load with package
   # for (eachName in names(d)){
@@ -92,7 +96,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
   #   save(list=eachName,file=paste0("data/",eachName,".rda"))
   # }
   
-  usethis::use_data(hydraDataList,overwrite = TRUE)
+  usethis::use_data(hydraDataList_msk,overwrite = TRUE)
   
 }
 
@@ -108,7 +112,8 @@ get_DatData_msk <- function(nlenbin,
                             survbiopar,
                             fishindex,
                             fishlen,
-                            intake){
+                            percapcons,
+                            path){
   # We stipulate all of the input data needed to write to the .dat file
   # Eventually it will be better to read all of these in from text files or a GUI. For now this will suffice
   d <- list() # set up list for data storage
@@ -426,9 +431,9 @@ get_DatData_msk <- function(nlenbin,
   d$observedTemperature <- t(obsTemp)
   
   # stomach weight
-  # uses same length-age lookup as above to convert to length specific intake
+  # uses same length-age lookup as above to convert to length specific percapcons
   # takes mean across all years to get single vector
-  stomachContent <- intake %>%
+  stomachContent <- percapcons %>%
     dplyr::mutate(species = Name) %>%
     tidyr::pivot_wider(-units, names_from = "variable", values_from = "value") %>%
     dplyr::left_join(svagelenbin) %>%
@@ -523,7 +528,11 @@ get_DatData_msk <- function(nlenbin,
   
   # recruitment covariate effects. # columns = d$Nrecruitment_cov
   # not used in estimation model
-  rec_covEffects <- data.frame(name = c(sort.default(d$speciesList)), speciesEffect1 = 0)
+  rec_covEffects <- data.frame(names =c (sort.default(d$speciesList)), speciesEffect1 = 0)
+  rownames(rec_covEffects) <- rec_covEffects$names
+  rec_covEffects <- subset(rec_covEffects, select=-names)
+  # ensure 0 numeric not character
+
   d$recruitCovEffects <- as.matrix(rec_covEffects)
   
   # fecundity all dummy variables not used in estimation model
@@ -545,6 +554,9 @@ get_DatData_msk <- function(nlenbin,
   
   # dummy variables, no covariate effects in estimation model
   maturity_covEffects <- data.frame(name = c(sort.default(d$speciesList)), speciesEffect1 = 0)
+  rownames(maturity_covEffects) <- maturity_covEffects$name
+  maturity_covEffects <- subset(maturity_covEffects, select=-name)
+  
   d$maturityCovEffects <- as.matrix(maturity_covEffects)
   
   # growth
@@ -557,14 +569,16 @@ get_DatData_msk <- function(nlenbin,
   
   # dummy variables, no covariate effects in estimation model
   growth_covEffects <- data.frame(name = c(sort.default(d$speciesList)), speciesEffect1 = 0)
+  rownames(growth_covEffects) <- growth_covEffects$name
+  growth_covEffects <- subset(growth_covEffects, select=-name)
+  
   d$growthCovEffects <- as.matrix(growth_covEffects)
   
   # intake: fixed parameters for all species
-  intake <- rbind(species = sort.default(d$speciesList),
-                  alpha = rep(0.004),
-                  beta = rep(0.11))
-  colnames(intake) <- intake[1,]
-  intake <- as.data.frame(intake[-1,])
+  intake <- rbind(alpha = rep(0.004, d$Nspecies),
+                  beta = rep(0.11, d$Nspecies))
+  colnames(intake) <- sort.default(d$speciesList)
+  intake <- as.data.frame(intake)
   
   d$intakeAlpha <- unlist(intake["alpha",])
   d$intakeBeta <- unlist(intake["beta",])
@@ -581,21 +595,26 @@ get_DatData_msk <- function(nlenbin,
   d$foodweb <- as.matrix(foodweb)
   
   #M2 size preference
-  M2sizePref <- rbind(species = sort.default(d$speciesList),
-                      mu = as.numeric(rep(0.5)),
-                      sigma = as.numeric(rep(2)))
-  colnames(M2sizePref) <- M2sizePref[1,]
-  M2sizePref <- as.data.frame(M2sizePref[-1,])
+  M2sizePref <- rbind(mu = as.numeric(rep(0.5, d$Nspecies)),
+                      sigma = as.numeric(rep(2), d$Nspecies))
+  colnames(M2sizePref) <- sort.default(d$speciesList)
+  M2sizePref <- as.data.frame(M2sizePref)
   
   d$M2sizePrefMu <- as.matrix(M2sizePref["mu",])
   d$M2sizePrefSigma <- as.matrix(M2sizePref["sigma",])
   
-  #fishery/fleet selectivity
-  fisherySelectivityc<- read.csv(paste0(path,"/fishing_selectivityc_NOBA.csv"),header=TRUE,row.names = 1)
-  d$fisherySelectivityc <- unlist(as.matrix(t(fisherySelectivityc)))
-  fisherySelectivityd<- read.csv(paste0(path,"/fishing_selectivityd_NOBA.csv"),header=TRUE,row.names = 1)
-  d$fisherySelectivityd <- unlist(as.matrix(t(fisherySelectivityd)))
+  # fishery catchability indicator (q's)
+  indicatorFisheryqs<- fleetdef
+  d$indicatorFisheryq<- unlist(indicatorFisheryqs$qind)
   
+  
+  #fishery/fleet selectivity MOVED TO PIN FILE AND REFORMATTED
+  # fisherySelectivityc<- read.csv(paste0(path,"/fishing_selectivityc_NOBA.csv"),header=TRUE,row.names = 1)
+  # d$fisherySelectivityc <- unlist(as.matrix(t(fisherySelectivityc)))
+  # fisherySelectivityd<- read.csv(paste0(path,"/fishing_selectivityd_NOBA.csv"),header=TRUE,row.names = 1)
+  # d$fisherySelectivityd <- unlist(as.matrix(t(fisherySelectivityd)))
+  
+  # NOTHING BELOW USED IN ESTIMATION, READ IN PLACEHOLDERS FROM CSV
   # B0 - equilibrium biomass
   B0 <- read.csv(paste0(path,"/B0_NOBA.csv"),header=TRUE,row.names = 1)
   d$B0 <- unlist(B0)
@@ -626,11 +645,6 @@ get_DatData_msk <- function(nlenbin,
                                row.names = 1)
   d$discardSurvival <- (unlist(as.matrix(discardSurvival)))
   
-  
-  # fishery catchability indicator (q's)
-  indicatorFisheryqs<- read.csv(paste0(path,"/fishing_q_indicator_NOBA.csv"),header=TRUE,row.names = 1)
-  d$indicatorFisheryq<- unlist(as.matrix(t(indicatorFisheryqs)))
-  
   # Autoregressive parameters for alternative error structure (AR) for survey, recruitment, catch
   ARparameters<- read.csv(paste0(path,"/observation_error.csv"),header=TRUE)
   d$ARParameters <- unlist(ARparameters)
@@ -645,7 +659,7 @@ get_DatData_msk <- function(nlenbin,
   d$areaMortality <- unlist(areaMortality)
   
   # add missing vectors from sim not used in est
-  if(is.null(d$fleetMembership)) d$fleetMembership <- rep(1, d$numGuilds) #WARNING: maps guilds to fleet 1
+  if(is.null(d$fleetMembership)) d$fleetMembership <- d$indicatorFisheryq #WARNING:assumes guilds=species
   if(is.null(d$minExploitation)) d$minExploitation <- rep(1e-05, d$Nfleets)
   if(is.null(d$maxExploitation)) d$maxExploitation <- rep(1e-05, d$Nfleets)
   
@@ -660,7 +674,12 @@ get_DatData_msk <- function(nlenbin,
 
 
 
-get_PinData <- function(path){
+get_PinData_msk <- function(nlenbin,
+                            focalspp,
+                            survlen,
+                            fishindex,
+                            fishlen,
+                            path){
   # Stipulate all information required for the pin data file
   p <- list()
   # path to data

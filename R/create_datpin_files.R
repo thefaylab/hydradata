@@ -292,8 +292,12 @@ write_DatFile <- function(dataList,listOfParameters) {
   cat(c(" ",dataList$devFPhase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("#  init_int fqphase              //fishery q estimation phase",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat(c(" ",dataList$fqphase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# init_int fsphase               //fishery selectivity estimation phase",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$fsphase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("#  init_int sqphase              //survey q estimation phase ",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat(c(" ",dataList$sqphase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# init_int ssphase               //survey selectivity estimation phase",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$ssphase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("#   init_int ssig_phase           //survey sigma (obs error) phase",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat(c(" ",dataList$ssigPhase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("#  init_int csig_phase           //catch sigma (obs error) phase",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
@@ -447,27 +451,27 @@ write_DatFile <- function(dataList,listOfParameters) {
   cat(c(" ",dataList$M2sizePrefSigma),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
 
 
-  # fishery selectivity
+  # fishery selectivity MOVED TO PIN FILE AND REFORMATTED
   # need to reformat for cat function
   #fisherySelectc <- format(as.matrix(dataList$fisherySelectivityc),digits=5)
   #fisherySelectd <- format(as.matrix(dataList$fisherySelectivityd),digits=5)
 
-  cat("#  //fishery selectivity pars from dat file, for now not area specific",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  #cat("#  init_matrix fishsel_c(1,Nspecies,1,Nfleets)  //fishery selectivity c par",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("#  init_matrix fishsel_c(1,Nfleets,1,Nspecies)  //fishery selectivity c par",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("  #benthic trawl and pelagic trawl and longline",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  # for (isp in 1:dataList$Nspecies) {
-  #   cat(c(" ",fisherySelectc[isp,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  # }
-  cat(c(" ",dataList$fisherySelectivityc),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  
-  #cat("#  init_matrix fishsel_d(1,Nspecies,1,Nfleets)  //fishery selectivity d par",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("#  init_matrix fishsel_d(1,Nfleets,1,Nspecies)  //fishery selectivity c par",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("  #benthic trawl and pelagic trawl and longline",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  # for (isp in 1:dataList$Nspecies) {
-  #   cat(c(" ",fisherySelectd[isp,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  # }
-  cat(c(" ",dataList$fisherySelectivityd),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # cat("#  //fishery selectivity pars from dat file, for now not area specific",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # #cat("#  init_matrix fishsel_c(1,Nspecies,1,Nfleets)  //fishery selectivity c par",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # cat("#  init_matrix fishsel_c(1,Nfleets,1,Nspecies)  //fishery selectivity c par",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # cat("  #benthic trawl and pelagic trawl and longline",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # # for (isp in 1:dataList$Nspecies) {
+  # #   cat(c(" ",fisherySelectc[isp,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # # }
+  # cat(c(" ",dataList$fisherySelectivityc),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # 
+  # #cat("#  init_matrix fishsel_d(1,Nspecies,1,Nfleets)  //fishery selectivity d par",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # cat("#  init_matrix fishsel_d(1,Nfleets,1,Nspecies)  //fishery selectivity c par",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # cat("  #benthic trawl and pelagic trawl and longline",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # # for (isp in 1:dataList$Nspecies) {
+  # #   cat(c(" ",fisherySelectd[isp,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # # }
+  # cat(c(" ",dataList$fisherySelectivityd),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   
 
   # Following content added after ICES publication by Gaichas et al. 2014
