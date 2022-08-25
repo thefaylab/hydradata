@@ -844,15 +844,25 @@ write_estPinFile <- function(dataList,listOfParameters){
   }
   
   # fishsel_pars, matrix fishsel c and d, 1:Nfleets
-  cat("# fishsel_pars, 1:Nspecies:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# fishsel_pars, row 1 c, row 2 d, columns 1:Nfleets:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  for (spar in 1:2) {
+    cat(c(" ",dataList$fishsel_pars[spar,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  }
   
   # ln_fishery_q: 1:Nspecies
-  cat("# ln_fishery_q, 1:Nspecies:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  
-  # survey_selpars, matrix survsel c and d, 1:Nfleets
-  cat("# survey_selpars, 1:Nspecies:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("# ln_fishery_q, ln_fishery_q(1,Nqpars) (= number of fished species - Nfleet*Narea):",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$ln_fishery_q),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   
   # ln_survey_q: 1:Nsurveys rows, 1:Nspecies columns
   cat("# ln_survey_q, rows 1:Nsurveys, columns 1:Nspecies:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  for (sv in 1:dataList$Nsurveys) {
+    cat(c(" ",dataList$ln_survey_q[sv,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  }
+  
+  # survey_selpars, matrix survsel c and d, 1:Nsurveys
+  cat("# survey_selpars, row 1 c, row 2 d, columns 1:Nsurveys:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  for (spar in 1:2) {
+    cat(c(" ",dataList$survsel_pars[spar,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  }
   
 }

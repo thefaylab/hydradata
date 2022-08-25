@@ -116,7 +116,7 @@ get_modbins <- function(nlenbin,
                         fishlen){
   # sizebin lengths--at present equal nlenbin increments across length range
   # pull observed min and max size from data to optimize start and end bin
-  b <- list()
+  bindef <- list()
   
   Nsizebins <- nlenbin
   Nspecies <- length(focalspp$Name)
@@ -153,10 +153,10 @@ get_modbins <- function(nlenbin,
     dplyr::select(-Name, everything()) %>%
     dplyr::rename('commentField-notused' = Name)
   
-  b$binwidth <- binwidth[1:Nspecies,1:Nsizebins]
+  bindef$binwidth <- binwidth[1:Nspecies,1:Nsizebins]
   row.names(bindef$binwidth) <- binwidth[,ncol(binwidth)]
   
-  modbins <- b$binwidth %>%
+  modbins <- bindef$binwidth %>%
     tibble::rownames_to_column("species") %>%
     tidyr::pivot_longer(!species, names_to = "sizebin", values_to = "binwidth") %>%
     dplyr::group_by(species) %>%
@@ -164,9 +164,9 @@ get_modbins <- function(nlenbin,
                   modbin.max = cumsum(binwidth)) %>%
     dplyr::mutate(sizebin = factor(sizebin, levels = unique(sizebin))) 
   
-  b$modbins <- modbins
+  bindef$modbins <- modbins
   
-  return(b)
+  return(bindef)
   
 }
 
@@ -753,6 +753,9 @@ get_PinData_msk <- function(nlenbin,
                             startpars,
                             Nyrs = d$Nyrs,
                             Nfleets = d$Nfleets,
+                            Nsurveys = d$Nsurveys,
+                            Nareas = d$Nareas,
+                            fqind = d$indicatorFisheryq,
                             observedCatch = d$observedCatch,
                             observedBiomass = d$observedBiomass,
                             path){
@@ -829,14 +832,42 @@ get_PinData_msk <- function(nlenbin,
   
   p$Fdevs <- Fdevs
   
+  # fishsel_pars
+  fishsel_c <- rep(1, Nfleets)
+  fishsel_d <- rep(1, Nfleets)
+  
+  p$fishsel_pars <- matrix(c(fishsel_c, fishsel_d), ncol = Nfleets, byrow = TRUE)
   
   
+  # ln_fishery_q: ln_fishery_q(1,Nqpars) (= sum of fishery_indicator_q - Nfleet*Narea):
+  # formula  needs adjustment now that we have 2 fisheries in qind, can't sum
+  # count of non-zero entries in fquind would do it
+  Nqpars <-length(fqind[fqind>0]) - Nfleets*Nareas
   
   # fishery catchability (q's)
-  fisheryqs<- read.csv(paste0(path,"/fishing_q_NOBA.csv"),header=TRUE,row.names = 1)
-  p$fisheryq<- fisheryqs
+  fisheryqs<- rep(1, Nqpars)
+  
+  p$fisheryq <- fisheryqs
+  
+  p$ln_fishery_q <- log(fisheryqs)
   
   
+  # ln_survey_q:
+  surveyqs<- matrix(1, Nsurveys, Nspecies)
+  
+  p$surveyq <-  surveyqs
+  
+  p$ln_survey_q <- log(surveyqs)
+  
+
+  # survey_selpars
+  survsel_c <- rep(1, Nsurveys)
+  survsel_d <- rep(1, Nsurveys)
+  
+  p$survsel_pars <- matrix(c(survsel_c,survsel_d), ncol = Nsurveys, byrow = TRUE)
+  
+  
+  # fishery and survey sigmas not used in estimation
   # survey q and obs error
   survey<- read.csv(paste0(path,"/survey_info_NOBA.csv"),header=TRUE,row.names = 1)
   p$surveyq<- unlist(survey["q",])
