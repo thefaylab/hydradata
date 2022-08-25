@@ -24,6 +24,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     fishindex <- mskeyrun::simCatchIndex
     fishlen <- mskeyrun::simFisheryLencomp
     percapcons <- mskeyrun::simPerCapCons
+    startpars <- mskeyrun::simStartPars
   }
 
   if(dattype == "real"){
@@ -55,6 +56,8 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     fishlen <- mskeyrun::realFisheryLencomp
     
     percapcons <- get_percapcons() # or put in mskeyrun
+    
+    startpars <- get_startpars() # or put in mskeyrun
   }
   
   # calculate model length bins for both pin and dat
@@ -748,38 +751,84 @@ get_PinData_msk <- function(nlenbin,
                             focalspp,
                             bindef,
                             startpars,
+                            Nyrs = d$Nyrs,
+                            Nfleets = d$Nfleets,
+                            observedCatch = d$observedCatch,
+                            observedBiomass = d$observedBiomass,
                             path){
   # Stipulate all information required for the pin data file
   p <- list()
   # path to data
   # list of species and guilds (Functional Groups)'
+  speciesList <- focalspp[order(focalspp$Name),]
+  Nspecies <- length(focalspp$Name)
   
   modbins <- bindef$modbins
   
   # starting length structure
   Y1N <- startpars %>%
-  
-    dplyr::filter(startlengths)%>%
-    dplyr::left_join(modbins) %>%
-    dplyr::filter(modbin.min < upper.bins & upper.bins <= modbin.max) %>%
-    dplyr::group_by(species, sizebin) %>%
-    dplyr::summarise(sumlen = log(sum(atoutput)/1000000)) %>%
+    dplyr::filter(variable=="Natlen") %>%
+    dplyr::left_join(modbins, by=c("Name" = "species")) %>%
+    dplyr::filter(modbin.min <= lenbin & lenbin < modbin.max) %>% #lenbin defined as lower
+    dplyr::group_by(Name, sizebin) %>%
+    dplyr::summarise(sumlen = log(sum(value)/1000000)) %>%
     tidyr::spread(sizebin, sumlen) %>%
-    ungroup() %>%
+    dplyr::ungroup() %>%
     replace(is.na(.),0) %>% # use 0 for missing value in pin file
-    select(-species) %>%
+    dplyr::select(-Name) %>%
     as.matrix()
   
-  rownames(modstartNlen) = sort.default(sppsubset$Name)
+  rownames(Y1N) = sort.default(speciesList$Name)
   
   p$Y1N <- Y1N
   
+  p$recalpha <- rep(0.0, Nspecies)
+  
+  p$recshape <- rep(0.0, Nspecies)
+  
+  p$recbeta <- rep(0.0, Nspecies)
   
   # Avg recruitment and deviations
-  redundantAvgRec <- read.csv(paste0(path,"/AvgRecPinData_NOBA.csv"),header=TRUE,row.names=1)
-  p$redundantAvgRec <- unlist(redundantAvgRec)
-  redundantRecDevs <- read.csv(paste0(path,"/RecDevsPinData_NOBA.csv"),header=TRUE,row.names=1)
-  p$redundantRecDevs <- unlist(t(as.matrix(redundantRecDevs)))
+  redundantAvgRec <- startpars %>%
+    dplyr::filter(variable=="AvgRec") %>%
+    dplyr::select(Name, ln_avgrec=value) %>%
+    tibble::column_to_rownames("Name") 
+  
+  p$redundantAvgRec <- t(redundantAvgRec)
+  
+  # recdevs start at 0
+  redundantRecDevs <-  matrix(0, Nspecies, Nyrs,
+                              dimnames = list(c(sort.default(speciesList$Name), NULL)))
+  
+  p$redundantRecDevs <- unlist(redundantRecDevs)
+  
+  p$ln_recsigma <- rep(1.0, Nspecies)
+  
+  # starting values for F are log exploitation rates based on observed fleets
+  sumcatchfleet <- observedCatch %>%
+    dplyr::group_by(fishery) %>%
+    dplyr::summarise(totcatch = sum(catch))
+  
+  fleetspp <- observedCatch %>%
+    dplyr::distinct(species, fishery, .keep_all = TRUE) %>%
+    dplyr::select(species, fishery)
+  
+  sumbiofleet <- observedBiomass %>%
+    dplyr::left_join(fleetspp) %>%
+    dplyr::group_by(fishery) %>%
+    dplyr::summarise(sppbio = sum(biomass))
+  
+  ln_avgF <- merge(sumcatchfleet, sumbiofleet) %>%
+    dplyr::mutate(avgF = totcatch/sppbio,
+                  lnavgF = log(avgF))
+  
+  p$ln_avgF <- t(ln_avgF$lnavgF)
+   
+  # Fdevs start at 0 
+  Fdevs <- matrix(0, Nfleets, Nyrs)
+  
+  p$Fdevs <- Fdevs
+  
   
   
   

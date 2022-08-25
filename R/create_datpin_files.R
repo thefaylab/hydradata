@@ -801,7 +801,7 @@ write_estPinFile <- function(dataList,listOfParameters){
   
   # year 1 initial values of N
   cat("#//Initial N year 1",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("#  init_3darray yr1N(1,Nareas,1,Nspecies,1,Nsizebins)       //initial year N at size, millions",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("#  init_3darray yr1N(1,Nareas,1,Nspecies,1,Nsizebins)       //initial year N at size, ln_millions",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   
   # need to reformat for cat function
   Y1Nformat <- format(as.matrix(dataList$Y1N),digits=7)
@@ -811,25 +811,37 @@ write_estPinFile <- function(dataList,listOfParameters){
   
   # recruitment_alpha, shape, and beta vectors 1:Nspecies filled with 0s for now
   cat("# recruitment_alpha, 1:Nspecies:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-
+  cat(c(" ",dataList$recalpha),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
   cat("# recruitment_shape, 1:Nspecies:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-
+  cat(c(" ",dataList$recshape),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
   cat("# recruitment_beta, 1:Nspecies:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$recbeta),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   
   # ln_avg_recruitment, vector 1:species
   cat("# ln_avg_recruitment, 1:Nspecies:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$redundantAvgRec),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   
   # recruitment_devs, matrix 1:Nspecies rows, 1:Nyrs columns filled with 0s
   cat("# recruitment_devs, rows 1:Nspecies, columns 1:Nyrs:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  for (sp in 1:dataList$Nspecies) {
+    cat(c(" ",dataList$redundantRecDevs[sp,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  }
   
   # ln_recsigma, vector 1:Nspecies, filled with 1s
   cat("# ln_recsigma, 1:Nspecies:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$ln_recsigma),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   
   # avg_F, vector 1:Nfleets
   cat("# avg_F, 1:fleets:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$ln_avgF),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   
   # F_devs, matrix 1:Nfleets rows, 1:Nyrs columns filled with 0s
   cat("# F_devs, rows 1:fleets, columns 1:Nyrs:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  for (fl in 1:dataList$Nfleets) {
+    cat(c(" ",dataList$Fdevs[fl,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  }
   
   # fishsel_pars, matrix fishsel c and d, 1:Nfleets
   cat("# fishsel_pars, 1:Nspecies:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
