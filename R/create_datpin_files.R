@@ -589,7 +589,9 @@ write_DatFile <- function(dataList,listOfParameters) {
   # Replace matrix by species and fleet with vector of length species indicating caught 1 or not 0
   cat("# init_3darray indicator_fishery_q(1,Nareas,1,Nfleets,1,Nspecies)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("# which species represent targeted catch. These are used to estmate exploitation rate in assessment",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat(c(" ",dataList$indicatorFisheryq),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  for (ifl in 1:dataList$Nfleets) {
+    cat(c(" ",dataList$indicatorFisheryq[ifl,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  }
   
 
   # AR parameters for  Survey, recruitment and Catch

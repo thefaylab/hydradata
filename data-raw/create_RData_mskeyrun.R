@@ -233,7 +233,7 @@ get_DatData_msk <- function(nlenbin,
   
   # these are defaults, may be changed by user for different runs
   #singletons <- read.csv(paste0(path,"/singletons_NOBA.csv"),header=FALSE,row.names = 1)
-  d$debugState <- 4
+  d$debugState <- 0
   d$Nyrs <- max(length(unique(survindex$year)), length(unique(fishindex$year)))
   d$Nspecies <- length(focalspp$Name)
   d$Nsizebins <- nlenbin
@@ -392,8 +392,9 @@ get_DatData_msk <- function(nlenbin,
                                         TRUE ~ allcombined),
                   codfleet = dplyr::case_when(species=="North_atl_cod" ~ 2,
                                        TRUE ~ 0),
-                  qind = allbutcod + codfleet) %>%
-    dplyr::select(species, qind)
+                  qind = allbutcod + codfleet,
+                  codfleet = codfleet/2) %>%
+    dplyr::select(species, allbutcod, codfleet, qind)
   
   # new long format
   obsCatch <- fishindex %>%
@@ -584,6 +585,9 @@ get_DatData_msk <- function(nlenbin,
   # change rectype input to 9=avg+devs
   stockRecruit[c("type"),] <- 9
   
+  # change stochastic recruitment switch to off
+  stockRecruit[c("stochastic"),] <- 0
+  
   d$alphaEggRicker <- unlist(stockRecruit["eggRicker_alpha",])
   d$shapeEggRicker <- unlist(stockRecruit["eggRicker_shape",])
   d$betaEggRicker <- unlist(stockRecruit["eggRicker_beta",])
@@ -697,8 +701,9 @@ get_DatData_msk <- function(nlenbin,
   d$M2sizePrefSigma <- as.matrix(M2sizePref["sigma",])
   
   # fishery catchability indicator (q's)
-  indicatorFisheryqs<- fleetdef
-  d$indicatorFisheryq<- unlist(indicatorFisheryqs$qind)
+  indicatorFisheryqs<- fleetdef %>%
+    dplyr::select(allbutcod, codfleet)
+  d$indicatorFisheryq<- as.matrix(t(indicatorFisheryqs))
   
   
   #fishery/fleet selectivity MOVED TO PIN FILE AND REFORMATTED
@@ -752,9 +757,9 @@ get_DatData_msk <- function(nlenbin,
   d$areaMortality <- unlist(areaMortality)
   
   # add missing vectors from sim not used in est
-  if(is.null(d$fleetMembership)) d$fleetMembership <- d$indicatorFisheryq #WARNING:assumes guilds=species
+  if(is.null(d$fleetMembership)) d$fleetMembership <- fleetdef$qind #WARNING:assumes guilds=species
   if(is.null(d$minExploitation)) d$minExploitation <- rep(1e-05, d$Nfleets)
-  if(is.null(d$maxExploitation)) d$maxExploitation <- rep(1e-05, d$Nfleets)
+  if(is.null(d$maxExploitation)) d$maxExploitation <- rep(0.999, d$Nfleets)
   
   
   # replace NA
