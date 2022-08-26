@@ -84,9 +84,16 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
                        focalspp,
                        bindef,
                        startpars,
+                       Nyrs = d$Nyrs,
+                       Nfleets = d$Nfleets,
+                       Nsurveys = d$Nsurveys,
+                       Nareas = d$Nareas,
+                       fqind = d$indicatorFisheryq,
+                       observedCatch = d$observedCatch,
+                       observedBiomass = d$observedBiomass,
                        path)
   
-  d$recName <- rep("segmented",d$Nspecies) # this is a hack. NEED to sort out data inputs
+  d$recName <- rep("avgplusdevs",d$Nspecies) # this is a hack. NEED to sort out data inputs
   
   # add all of fields to hydraData
   hydraDataList_msk <- d
@@ -311,9 +318,9 @@ get_DatData_msk <- function(nlenbin,
   d$maturityCov <- rep(1, d$Nyrs)
   d$growthCov <- rep(1, d$Nyrs)
   # number of covariates
-  d$NrecruitmentCov <- dim(d$recruitmentCov)[1]
-  d$NmaturityCov <- dim(d$maturityCov)[1]
-  d$NgrowthCov <- dim(d$growthCov)[1]
+  d$NrecruitmentCov <- dim(t(d$recruitmentCov))[1]
+  d$NmaturityCov <- dim(t(d$maturityCov))[1]
+  d$NgrowthCov <- dim(t(d$growthCov))[1]
   
   # observed survey biomass
   # new long format
