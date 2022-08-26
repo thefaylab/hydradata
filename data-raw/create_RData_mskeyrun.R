@@ -656,7 +656,7 @@ get_DatData_msk <- function(nlenbin,
   
   d$maturityCovEffects <- as.matrix(maturity_covEffects)
   
-  # growth
+  # growth FIX THIS TO BE ESTIMATED IN A FUNCTION HERE
   growth <- read.csv(paste0(path,"/growth_species_NOBA_era1_BTS_fall_allbox_effic1.csv"),header=TRUE,row.names=1)
   d$growthPsi <- unlist(growth["psi",])
   d$growthKappa <- unlist(growth["kappa",])
@@ -713,11 +713,18 @@ get_DatData_msk <- function(nlenbin,
   # d$fisherySelectivityd <- unlist(as.matrix(t(fisherySelectivityd)))
   
   # NOTHING BELOW USED IN ESTIMATION, READ IN PLACEHOLDERS FROM CSV
-  # B0 - equilibrium biomass
-  B0 <- read.csv(paste0(path,"/B0_NOBA.csv"),header=TRUE,row.names = 1)
-  d$B0 <- unlist(B0)
+  # But these will break with different data sources so update with calculations
+  # B0 - equilibrium biomass faked in with initial year survey biomass
+  B0 <- survindex %>%
+    dplyr::filter(year==min(year),
+                  variable=="biomass") %>%
+    dplyr::group_by(Name) %>%
+    dplyr::summarise(B0 = mean(value)) %>%
+    dplyr::select(Name, B0) 
   
-  # assessment thresholds + exploitations
+  d$B0 <- B0$B0
+  
+  # assessment thresholds + exploitations (fixed for sims, not used in est)
   assessmentThresholds <-  read.csv(paste0(path,"/assessmentThresholds.csv"),header=TRUE)
   d$thresholds <- assessmentThresholds$thresholds
   thresholds <- d$thresholds[d$thresholds< 1]
@@ -725,22 +732,24 @@ get_DatData_msk <- function(nlenbin,
   d$exploitationOptions <- assessmentThresholds[,2:dim(assessmentThresholds)[2]]
   d$minMaxThresholds <- c(min(thresholds),max(thresholds))
   
-  # additionl level added to species specific threshold
-  assessmentThresholdsSpecies <-  read.csv(paste0(path,"/assessmentThresholdsSpecies_NOBA.csv"),header=TRUE,row.names = 1)
+  # additional level added to species specific threshold
+  assessmentThresholdsSpecies <-  matrix(0, 1, d$Nspecies, 
+                                         dimnames = c("additionalThreshold", list(sort.default(d$speciesList))))
   d$thresholdSpecies <- unlist(assessmentThresholdsSpecies)
   
   #scaled Efort - not used
-  scaledEffort <-  read.csv(paste0(path,"/observation_effortScaling_NOBA.csv"),header=TRUE)
+  scaledEffort <-  as.data.frame(matrix(1, 1, d$Nspecies, 
+                                        dimnames = c("", list(c(sort.default(d$speciesList))))))
   d$scaledEffort <- unlist(scaledEffort)
   
   # discard coefficient - prob of discard
-  discardCoef <-  read.csv(paste0(path,"/fishing_discards_NOBA.csv"),header=TRUE,#skip=3,
-                           row.names = 1)
+  discardCoef <-  matrix(0, d$Nspecies*d$Nfleets, d$Nsizebins)
+  
   d$discardCoef <- (unlist(as.matrix(discardCoef)))
   
   # discard survival probability | discard
-  discardSurvival <-  read.csv(paste0(path,"/fishing_discardsSurvival_NOBA.csv"),header=TRUE,#skip=3,
-                               row.names = 1)
+  discardSurvival <-  matrix(1, d$Nspecies*d$Nfleets, d$Nsizebins)
+  
   d$discardSurvival <- (unlist(as.matrix(discardSurvival)))
   
   # Autoregressive parameters for alternative error structure (AR) for survey, recruitment, catch
@@ -749,11 +758,13 @@ get_DatData_msk <- function(nlenbin,
   
   
   # residence time in the modeled area
-  residenceTime <- read.csv(paste0(path,"/restime_NOBA.csv"),header=TRUE)
+  residenceTime <- as.data.frame(matrix(1, 1, d$Nspecies, 
+                                        dimnames = c("", list(c(sort.default(d$speciesList))))))
   d$residenceTime <- unlist(residenceTime)
   
   # mortality rate outside the modeled area
-  areaMortality <- read.csv(paste0(path,"/outsidemort_NOBA.csv"),header=TRUE)
+  areaMortality <- as.data.frame(matrix(0, 1, d$Nspecies, 
+                                        dimnames = c("", list(c(sort.default(d$speciesList))))))
   d$areaMortality <- unlist(areaMortality)
   
   # add missing vectors from sim not used in est
