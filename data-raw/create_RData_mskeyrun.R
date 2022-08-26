@@ -325,10 +325,13 @@ get_DatData_msk <- function(nlenbin,
   d$NmaturityCov <- dim(d$maturityCov)[1]
   d$NgrowthCov <- dim(d$growthCov)[1]
   
+  fitstartyr <- survindex$year[1]-1
+  
   # observed survey biomass
   # new long format
   obsBio <- survindex %>%
     dplyr::mutate(species = Name) %>%
+    dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
     tidyr::pivot_wider(-units, names_from = "variable", values_from = "value") %>%
     dplyr::select(survey, year, species, biomass, cv)
   
@@ -350,6 +353,7 @@ get_DatData_msk <- function(nlenbin,
   
   obsSurvSize <- survlen %>%
     dplyr::mutate(species = Name) %>%
+    dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
     dplyr::select(species,  year, survey, lenbin, value) %>%
     dplyr::left_join(modbins) %>%
     dplyr::filter(modbin.min <= lenbin & lenbin < modbin.max) %>% #lenbin defined as lower
@@ -394,6 +398,7 @@ get_DatData_msk <- function(nlenbin,
   # new long format
   obsCatch <- fishindex %>%
     dplyr::mutate(species = Name) %>%
+    dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
     tidyr::pivot_wider(-units, names_from = "variable", values_from = "value") %>%
     dplyr::group_by(species) %>%
     dplyr::mutate(totcatch = sum(catch)) %>%
@@ -414,6 +419,7 @@ get_DatData_msk <- function(nlenbin,
   # observed catch size composition
   obsCatchSize <- fishlen %>%
     dplyr::mutate(species = Name) %>%
+    dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
     dplyr::select(species,  year, lenbin, value) %>%
     dplyr::left_join(modbins) %>%
     dplyr::filter(modbin.min <= lenbin & lenbin < modbin.max) %>% #lenbin defined as lower
@@ -453,6 +459,7 @@ get_DatData_msk <- function(nlenbin,
   # need length comp by age to get diet at length
   svagelenbin <- survagelen %>%
     dplyr::mutate(species = Name) %>%
+    dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
     dplyr::select(species, year, survey, agecl, lenbin, value) %>%
     dplyr::left_join(modbins) %>%
     dplyr::filter(modbin.min <= lenbin & lenbin < modbin.max) %>% #lenbin defined as lower
@@ -463,6 +470,7 @@ get_DatData_msk <- function(nlenbin,
   
   obsSurvDiet <- survdiet %>%
     dplyr::mutate(species = Name) %>%
+    dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
     dplyr::left_join(svagelenbin) %>%
     dplyr::mutate(dietpropage = value*propage) %>% #reweight diets for lengthbins
     dplyr::group_by(species, survey, year, sizebin, prey) %>%
@@ -509,6 +517,7 @@ get_DatData_msk <- function(nlenbin,
   # simulation using only fall: NOBA_BTS_fall_allbox_effic1
   obsTemp <- survtemp %>%
     dplyr::filter(survey=="BTS_fall_allbox_effic1") %>%
+    dplyr::mutate(year = as.integer(year-fitstartyr)) %>% #year starts at 1
     dplyr::select(year, meantemp=value)
   
   d$observedTemperature <- t(obsTemp)
@@ -518,6 +527,7 @@ get_DatData_msk <- function(nlenbin,
   # takes mean across all years to get single vector
   stomachContent <- percapcons %>%
     dplyr::mutate(species = Name) %>%
+    dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
     tidyr::pivot_wider(-units, names_from = "variable", values_from = "value") %>%
     dplyr::left_join(svagelenbin) %>%
     dplyr::filter(!is.na(sizebin)) %>% # see note below
