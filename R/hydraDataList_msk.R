@@ -70,7 +70,7 @@
 #'   \item{ln_avgF}{Numeric vector (Nfleets): estimation starting value for average fishing mortality F, log scale}
 #'   \item{ln_fishery_q}{Numeric vector (Nqpars): estimation starting value for fishery catchability, log scale}
 #'   \item{ln_recsigma}{Numeric vector (Nspecies): estimation starting value for recruitment error term sigma, log scale}
-#'   \item{ln_survey_q}{}
+#'   \item{ln_survey_q}{Numeric matrix (Nsurveys x Nspecies): estimation starting value for survey catchability, log scale}
 #'   \item{M1}{Numeric matrix (Nspecies x Nsizebins): Rate of M1 mortality (natural mortality unexplained by model) for each species in in each size class AT EACH TIME STEP.}
 #'   \item{M2sizePrefMu}{Numeric vector (Nspecies): size preference parameter (location parameter (mu) of the log normal distribution) }
 #'   \item{M2sizePrefSigma}{Numeric vector (Nspecies): size preference parameter (scale parameter (sigma) of the log normal distribution)}
@@ -78,44 +78,44 @@
 #'   \item{maturityCovEffects}{Numeric matrix (Nspecies x NmaturityCov): Weight of each covariate for maturity for each species}
 #'   \item{maturityNu}{Numeric vector (Nspecies): maturity parameter (location)}
 #'   \item{maturityOmega}{Numeric vector (Nspecies): maturity parameter (scale)}
-#'   \item{maxExploitation}{}
-#'   \item{minExploitation}{}
+#'   \item{maxExploitation}{Numeric vector (Nfleets): not used in estimation}
+#'   \item{minExploitation}{Numeric vector (Nfleets): not used in estimation}
 #'   \item{minMaxThresholds}{Numeric vector (2): The minimum and maximum thresholds used during an assessment (as a proportion of unfished biomass). The maximum is the level at which effort is reduced (from maximum exploitation) due to overfishing. The minimum is the level in which minimum exploitation is reached. See \code{minMaxExploitation}}
 #'   \item{Nareas}{Integer scalar: Number of spatial regions in the model.}
-#'   \item{Ncatch_obs}{}
-#'   \item{Ncatch_size_obs}{}
-#'   \item{Ndietprop_obs}{}
+#'   \item{Ncatch_obs}{Integer scalar: Number of observations (rows) in the long format catch biomass input}
+#'   \item{Ncatch_size_obs}{Integer scalar: Number of observations (rows) in the long format catch proportion at length input}
+#'   \item{Ndietprop_obs}{Integer scalar: Number of observations (rows) in the long format diet proportion at length input}
 #'   \item{Nfleets}{Integer scalar: Number of fleets in the model. See \code{fleetNames}}
 #'   \item{NgrowthCov}{Integer scalar: Number of growth covariates. See \code{growthCov}}
 #'   \item{NmaturityCov}{Integer scalar: Number of maturity covatiates. See \code{maturityCov}}
 #'   \item{NrecruitmentCov}{Integer scalar: Number og recruitment covariates. See \code{recruitmentCov}}
 #'   \item{Nsizebins}{Integer scalar: Number of size classes (Each species must have same number of size classes, different widths.). See \code{binwidth}}
 #'   \item{Nspecies}{Integer scalar: Number of species in the model}
-#'   \item{Nsurvey_obs}{}
-#'   \item{Nsurvey_size_obs}{}
+#'   \item{Nsurvey_obs}{Integer scalar: Number of observations (rows) in the long format survey biomass input}
+#'   \item{Nsurvey_size_obs}{Integer scalar: Number of observations (rows) in the long format survey proportion at length input}
 #'   \item{Nsurveys}{Integer scalar: Number of survey index time series used in the model}
-#'   \item{Nthresholds}{Integer scalar: number of assessment threshold. See \code{thresholds} for thresholf values}
+#'   \item{Nthresholds}{Integer scalar: number of assessment threshold. See \code{thresholds} for threshold values}
 #'   \item{numGuilds}{Integer scalar: Number of guilds. See \code{guildNames}}
 #'   \item{Nyrs}{Integer scalar: Number of years in the model}
-#'   \item{observedBiomass}{Numeric matrix : Real biomass values (from data) for each species over time. First row is year. Currently these are model values from ALTANTIS. Only used in estimation}
-#'   \item{observedCatch}{Numeric matrix : Real catch values (from data) for each species over time. First row is year. Currently these are model values from ALTANTIS. Only used in estimation}
-#'   \item{observedCatchSize}{}
-#'   \item{observedEffort}{Numeric matrix (Nfleets+1) x Nyrs: Real fishing effort data for each fleet in the model. First row is year. }
-#'   \item{observedSurvDiet}{}
-#'   \item{observedSurvSize}{}
+#'   \item{observedBiomass}{Numeric matrix (long format survey, year, species, biomass, cv): Real survey biomass values (from data) for each species over time. Only used in estimation}
+#'   \item{observedCatch}{Numeric matrix (long format fishery, area, year, species, catch, cv): Real catch values (from data) for each species over time. Only used in estimation}
+#'   \item{observedCatchSize}{Numeric matrix (long format fishery, area, year, species, type, inpN, sizebins1:Nsizebins): proportion of catch numbers in each sizebin}
+#'   \item{observedEffort}{Numeric matrix (Nfleets+1) x Nyrs: Fishing effort data for each fleet in the model. First row is year. }
+#'   \item{observedSurvDiet}{Numeric matrix (long format survey, year, species, sizebin, inpN, 1:Nspecies+1): proportion of diet from each modeled species plus allotherprey}
+#'   \item{observedSurvSize}{Numeric matrix (long format survey, year, species, type, inpN, sizebins1:Nsizebins): proportion of survey numbers in each sizebin}
 #'   \item{observedTemperature}{Numeric matrix (2 x Nyrs): Real temperature values ('C) over time. First row is year.}
 #'   \item{otherFood}{Numeric scalar: Amount of other food (metric tonnes) available for species in the model. This represents other food sources not explicity accounted for in the model }
 #'   \item{phimax}{Numeric scalar: Scales the growth of fish to the rate of the fasting growing fish. This is set to 1 and shouldn't be a parameter. If the calculated growth rates are all < 1, then no species will grow out of a size class in the given time interval. In that case phimax = 1 is used.}
 #'   \item{predOrPrey}{Binary vector: Indicated which species is considered a predator or prey. (This is subjective). This is used in as part of a health index where the ratio of predator to prey is monitored}
-#'   \item{recalpha}{??}
-#'   \item{recbeta}{??}
-#'   \item{recName}{??}
-#'   \item{recphase}{??}
+#'   \item{recalpha}{Numeric vector (Nspecies): estimation starting values for recruitment function parameters}
+#'   \item{recbeta}{Numeric vector (Nspecies): estimation starting values for recruitment function parameters}
+#'   \item{recName}{Character vector: name of recruitment function used for each species}
+#'   \item{recphase}{Integer scalar: estimation phase for recruitment parameters}
 #'   \item{recruitCovEffects}{Numeric matrix (Nspecies x NmaturityCov): Weight of each covariate for recruitment for each species}
 #'   \item{recruitmentCov}{Numeric matrix (NrecruitmentyCov x Nyrs): Covariates that determine species recruitment}
-#'   \item{recshape}{??}
+#'   \item{recshape}{Numeric vector (Nspecies): estimation starting values for recruitment function parameters}
 #'   \item{recSigma}{Numeric vector: standard deviation associated with recruitment estimates (based on spawning stock biomass size). (0 = known perfectly, no error). See \code{recStochastic}}
-#'   \item{recsigmaphase}{}
+#'   \item{recsigmaphase}{Integer scalar: estimation phase for std dev of recruit resids}
 #'   \item{recStochastic}{Binary vector (Nspecies): A switch to turn on (1) and off (0) recruitment error}
 #'   \item{recType}{Integer vector (Nspecies): Determins which form of recruitment is to be used. Values (1= Egg production, 2= Deriso-Scnute, 3= Gamma, 4= Ricker, 5= Beverton holt, 6= Shepherd, 7= Hockey Stick, 8= Segmented Linear model, 9= recruitment deviations). Default = 8 (Segmented linear model)}
 #'   \item{redundantAvgRec}{Numeric vector (Nspecies): Average recruitment for each species}
@@ -132,19 +132,19 @@
 #'   \item{shapeRicker}{Numeric Vector: (shape) for Ricker Stock recruitment relationship}
 #'   \item{shapeSegmented}{Numeric Vector: (shape) for Segmented (linear) recruitment relationship}
 #'   \item{shapeShepherd}{Numeric Vector: (shape) for Shepherd Stock recruitment relationship}
-#'   \item{speciesList}{Character vector: names of species in model}
-#'   \item{speciesNum}{}
-#'   \item{sqphase}{??}
-#'   \item{ssigPhase}{??}
-#'   \irem{ssphase}{}
+#'   \item{speciesList}{Character vector (Nspecies): names of species in model}
+#'   \item{speciesNum}{Numeric Vector (Nspecies): numbers of species in the model ordered by names used in observation files}
+#'   \item{sqphase}{Integer scalar: estimation phase for survey catchabilty q}
+#'   \item{ssigPhase}{Integer scalar: estimation phase for survey sigma (obs error)}
+#'   \irem{ssphase}{Integer scalar: estimation phase for survey length selectivity parameters}
 #'   \item{surveyq}{Numeric vector (Nspecies): Proportion of true biomass sampled on a survey. (q = 1 equates to known exactly) }
 #'   \item{surveySigma}{Numeric vector (Nspecies): The uncertainty (standard deviation) of estimate of survey biomass (0 = known perfectly, no error)}
-#'   \item{survsel_pars}{}
+#'   \item{survsel_pars}{Numeric matrix (2 parameters c and d x Nsurvey): parameters of logistic curve representing survey proportion caught at fish length}
 #'   \item{thresholds}{Numeric vector (Nthresholds): The proportions of unfished biomass at which exploitation is decreased }
 #'   \item{thresholdSpecies}{Numeric vector (Nspecies): A proportion in excess of the current \code{thresholds}. These species have reduced exploitaion at higher proportions of B/B0 }
 #'   \item{wtconv}{Numeric Scalar: conversion factor from weight (g) to biomass}
-#'   \item{Y1N}{Numeric Vector (Nspecies x Nsizebins): initial abundance estimates (milions) for each species in each size class }
-#'   \item{yr1Nphase}{??}
+#'   \item{Y1N}{Numeric Vector (Nspecies x Nsizebins): initial abundance estimates (millions) for each species in each size class, logspace}
+#'   \item{yr1Nphase}{Integer scalar: estimation phase for initial numbers at size}
 #'
 #'   \item{minMaxExploitation}{Numeric Vector (2): The minimum and maximum values of exploitation permissable during an assessment (as a proportion of unfished biomass). The maximum is the level at which all stocks are healthy. The minimum is the lowest level due to overfishing. See \code{minMaxThresholds}}
 #'   \item{assessmentOn}{Binary Scalar: Assessment scenario on (1) or not (0). This is set in \code{\link{create_datpin_files}}}
