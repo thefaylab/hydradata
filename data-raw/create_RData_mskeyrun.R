@@ -204,11 +204,14 @@ get_DatData_msk <- function(nlenbin,
     dplyr::group_by(species, prey) %>%
     dplyr::summarise(avgpreyprop = mean(value)) 
   
+  neverprey <- setdiff(predPrey$species, predPrey$prey)
+  
   foodweb <- dplyr::left_join(focalspp, predPrey, by=c("Name" = "species")) %>%
     dplyr::select(species=Name, prey, avgpreyprop) %>%
     dplyr::mutate(avgpreyprop = ceiling(avgpreyprop)) %>%
     tidyr::spread(species, avgpreyprop) %>%
-    dplyr::filter(!is.na(prey)) %>%
+    dplyr::mutate(prey = dplyr::case_when(is.na(prey) ~ neverprey,
+                                   TRUE ~ prey)) %>%
     replace(is.na(.), 0)
   
   predOrPrey <- ifelse(colSums(foodweb[-1])>0, 1, 0)
@@ -314,13 +317,13 @@ get_DatData_msk <- function(nlenbin,
   # growthCovs <- read.csv(paste0(path,"/growth_covariates_NOBA.csv"),header=TRUE)
   
   # not used in mskeyrun, dummy variables  
-  d$recruitmentCov <- rep(1, d$Nyrs)
-  d$maturityCov <- rep(1, d$Nyrs)
-  d$growthCov <- rep(1, d$Nyrs)
+  d$recruitmentCov <- matrix(rep(1, d$Nyrs), nrow = 1, byrow = TRUE)
+  d$maturityCov <- matrix(rep(1, d$Nyrs), nrow = 1, byrow = TRUE)
+  d$growthCov <- matrix(rep(1, d$Nyrs), nrow = 1, byrow = TRUE)
   # number of covariates
-  d$NrecruitmentCov <- dim(t(d$recruitmentCov))[1]
-  d$NmaturityCov <- dim(t(d$maturityCov))[1]
-  d$NgrowthCov <- dim(t(d$growthCov))[1]
+  d$NrecruitmentCov <- dim(d$recruitmentCov)[1]
+  d$NmaturityCov <- dim(d$maturityCov)[1]
+  d$NgrowthCov <- dim(d$growthCov)[1]
   
   # observed survey biomass
   # new long format
@@ -854,9 +857,9 @@ get_PinData_msk <- function(nlenbin,
   # fishery catchability (q's)
   fisheryqs<- rep(1, Nqpars)
   
-  p$fisheryq <- fisheryqs
+  p$fisheryq <- read.csv(paste0(path,"/fishing_q_NOBA.csv"),header=TRUE,row.names = 1) #old for -sim.pin
   
-  p$ln_fishery_q <- log(fisheryqs)
+  p$ln_fishery_q <- log(fisheryqs) # for estimation pin file
   
   
   # ln_survey_q:
