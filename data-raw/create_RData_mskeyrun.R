@@ -811,6 +811,7 @@ get_PinData_msk <- function(nlenbin,
     dplyr::filter(modbin.min <= lenbin & lenbin < modbin.max) %>% #lenbin defined as lower
     dplyr::group_by(Name, sizebin) %>%
     dplyr::summarise(sumlen = log(sum(value)/1000000)) %>%
+    tidyr::complete(sizebin) %>% #adds back any missing sizebin factor levels
     tidyr::spread(sizebin, sumlen) %>%
     dplyr::ungroup() %>%
     replace(is.na(.),0) %>% # use 0 for missing value in pin file
