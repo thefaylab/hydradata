@@ -29,6 +29,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
 
   if(dattype == "real"){
     focalspp <- mskeyrun::focalSpecies %>%
+      dplyr::filter(modelName != "Pollock") %>% # not using in these models
       dplyr::mutate(Name = modelName)
     
     survindex <- mskeyrun::surveyIndex %>%
@@ -37,7 +38,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
                     year = YEAR,
                     survey = SEASON)
     
-    survlen <- mskeyrun::realSurveyLencomp
+    survlen <- mskeyrun::realSurveyLennumcomp
     
     survagelen <- NULL #diet already has length in it
     
@@ -45,7 +46,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     
     survtemp <- get_bottemp() #use ecodata
     
-    survbiolpar <- 
+    survbiolpar <- mskeyrun::realBiolPar
     
     fishindex <- mskeyrun::catchIndex%>%
       dplyr::left_join(focalspp) %>%
@@ -126,7 +127,7 @@ get_modbins <- function(nlenbin,
   bindef <- list()
   
   Nsizebins <- nlenbin
-  Nspecies <- length(focalspp$Name)
+  Nspecies <- length(unique(focalspp$Name))
   
   minmaxsurv <- survlen %>%
     dplyr::group_by(Name) %>%
