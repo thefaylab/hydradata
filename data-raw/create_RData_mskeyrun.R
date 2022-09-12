@@ -28,33 +28,95 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
   }
 
   if(dattype == "real"){
+    modyears <- 1968:2019  #agreed for project
+  
     focalspp <- mskeyrun::focalSpecies %>%
       dplyr::filter(modelName != "Pollock") %>% # not using in these models
       dplyr::mutate(Name = modelName)
     
-    survindex <- mskeyrun::surveyIndex %>%
+    # single index, use if fitting to two not working
+    survindex.all <- mskeyrun::surveyIndex %>%
+      dplyr::filter(YEAR %in% modyears) %>%
       dplyr::left_join(focalspp) %>%
-      dplyr::mutate(Name = modelName,
+      dplyr::mutate(ModSim = "Actual",
                     year = YEAR,
-                    survey = SEASON)
+                    Code = SPECIES_ITIS,
+                    Name = modelName,
+                    survey = paste0("Combined ", SEASON)) %>%
+      dplyr::select(ModSim, year, Code, Name, survey, variable, value, units)
+
+    survindex.AL <- mskeyrun::surveyIndexA4 %>%
+      dplyr::filter(YEAR %in% modyears) %>%
+      dplyr::left_join(focalspp) %>%
+      dplyr::mutate(ModSim = "Actual",
+                    year = YEAR,
+                    Code = SPECIES_ITIS,
+                    Name = modelName,
+                    survey = paste0("Albatross ", SEASON)) %>%
+      dplyr::select(ModSim, year, Code, Name, survey, variable, value, units)
+
+    survindex.HB <- mskeyrun::surveyIndexHB %>%
+      dplyr::filter(YEAR %in% modyears) %>%
+      dplyr::left_join(focalspp) %>%
+      dplyr::mutate(ModSim = "Actual",
+                    year = YEAR,
+                    Code = SPECIES_ITIS,
+                    Name = modelName,
+                    survey = paste0("Bigelow ", SEASON)) %>%
+      dplyr::select(ModSim, year, Code, Name, survey, variable, value, units)
     
-    survlen <- mskeyrun::realSurveyLennumcomp
+    # try to fit separately
+    survindex <- dplyr::bind_rows(survindex.AL, survindex.HB)
+    
+    survlen <- mskeyrun::realSurveyLennumcomp %>%
+      dplyr::filter(year %in% modyears) %>%
+      dplyr::mutate(vessel = dplyr::case_when(year<2009 ~ "Albatross",
+                                              year>=2009 ~ "Bigelow", 
+                                              TRUE ~ as.character(NA)),
+                    survey = paste(vessel, season)) %>%
+      dplyr::select(ModSim, year, Code, Name, survey, lenbin, variable, value, units)
     
     survagelen <- NULL #diet already has length in it
     
     survdiet <- get_survDiet() # or put in mskeyrun
     
-    survtemp <- get_bottemp() #use ecodata
+    survtempdat <- ecodata::bottom_temp %>% 
+      dplyr::filter(EPU == "GB",
+                    Time %in% modyears,
+                    Var %in% c("bottom temp anomaly in situ",
+                               "reference bt in situ (1981-2010)")) %>%  
+      tidyr::pivot_wider(names_from = "Var", values_from = "Value") %>%  
+      dplyr::mutate(ModSim = "Actual",
+                    year = Time,
+                    survey = paste0("2022ecodata::bottom_temp ",Time),
+                    variable = "bottomtemp",
+                    value = `bottom temp anomaly in situ` +`reference bt in situ (1981-2010)`,
+                    units = Units) %>%
+      dplyr::select(ModSim, year, survey, variable, value, units)
+    
+    survtempfill <- data.frame(ModSim = "Actual",
+                           year = setdiff(survindex$year, survtempdat$year),
+                           survey = "2022ecodata::bottom_temp mean 1977-1981",
+                           variable = "bottomtemp",
+                           value = mean(survtempdat$value[survtemp$year %in% 1977:1981]),
+                           units = "degreesC")
+    
+    survtemp <- dplyr::bind_rows(survtempfill, survtempdat)
     
     survbiolpar <- mskeyrun::realBiolPar
     
-    fishindex <- mskeyrun::catchIndex%>%
-      dplyr::left_join(focalspp) %>%
-      dplyr::mutate(Name = modelName,
+    fishindex <- mskeyrun::catchIndex %>%
+      dplyr::filter(YEAR %in% modyears) %>%
+      dplyr::left_join(focalspp %>% dplyr::mutate(NESPP3 = as.integer(NESPP3))) %>%
+      dplyr::mutate(ModSim = "Actual",
                     year = YEAR,
-                    survey = SEASON)
+                    Code = SPECIES_ITIS,
+                    Name = modelName,
+                    fishery = "total catch") %>%
+      dplyr::select(ModSim, year, Code, Name, fishery, variable, value, units)
     
-    fishlen <- mskeyrun::realFisheryLencomp
+    fishlen <- mskeyrun::realFisheryLencomp %>% #identical column names to sim, single fishery in real data
+      dplyr::filter(year %in% modyears)
     
     percapcons <- get_percapcons() # or put in mskeyrun
     
