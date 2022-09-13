@@ -78,7 +78,9 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     
     survagelen <- NULL #diet already has length in it
     
-    survdiet <- get_survDiet() # or put in mskeyrun
+    GBsurvstrata  <- c(1090, 1130:1210, 1230, 1250, 3460, 3480, 3490, 3520:3550)
+    
+    survdiet <- getHydraDiet(focalspp, GBsurvstrata)
     
     survtempdat <- ecodata::bottom_temp %>% 
       dplyr::filter(EPU == "GB",
@@ -98,7 +100,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
                            year = setdiff(survindex$year, survtempdat$year),
                            survey = "2022ecodata::bottom_temp mean 1977-1981",
                            variable = "bottomtemp",
-                           value = mean(survtempdat$value[survtemp$year %in% 1977:1981]),
+                           value = mean(survtempdat$value[survtempdat$year %in% 1977:1981]),
                            units = "degreesC")
     
     survtemp <- dplyr::bind_rows(survtempfill, survtempdat)
