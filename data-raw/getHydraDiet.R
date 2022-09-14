@@ -1,8 +1,10 @@
 # read in current survey diet data
 # filter to focal predator species and model area
 # filter years
-# estimate diet proportions for focal species in area, years
+# estimate diet amounts for focal species at length in area, years
+# then can build proportion at length bin in create_Rdata_mskeyrun
 # using code from get_diet.R here https://github.com/sgaichas/bluefishdiet/blob/main/get_diet.R
+# modified to retain predator length information
 library(dplyr)
 
 getHydraDiet <- function(focalspp, survstrat){
@@ -35,7 +37,8 @@ getHydraDiet <- function(focalspp, survstrat){
     na.omit() %>%
     dplyr::group_by(year,
                     season,
-                    svspp) %>%
+                    svspp,
+                    pdlen) %>% #added
     dplyr::summarise(nstom    = n(),
                      meanstom = mean(totwt, na.rm = TRUE),
                      varstom  = var(totwt, na.rm = TRUE),
@@ -61,7 +64,8 @@ getHydraDiet <- function(focalspp, survstrat){
     na.omit() %>%
     dplyr::group_by(year,
                     season,
-                    svspp) %>%
+                    svspp,
+                    pdlen) %>% #added
     dplyr::summarise(meanwgt = mean(pdwgt, na.rm = TRUE),
                      numwgt  = n(),
                      minwgt  = min(pdwgt, na.rm = TRUE),
@@ -69,9 +73,10 @@ getHydraDiet <- function(focalspp, survstrat){
   
   #stomstats2
   nstom_df <- allsum_len %>%
-    dplyr::left_join(allsum_wgt, by = c("year", "season", "svspp")) %>%
+    dplyr::left_join(allsum_wgt, by = c("year", "season", "svspp", 
+                                        "pdlen")) %>% #added
     # mutate(std.error = sqrt(varstom/nstom)) %>% 
-    dplyr::select(svspp, year, season, nstom)
+    dplyr::select(svspp, year, season, pdlen, nstom)
   
   #----------------------------------Start weighted diet proportion code-------------------------------------#
   
@@ -147,7 +152,8 @@ getHydraDiet <- function(focalspp, survstrat){
              year,
              season,
              svspp, 
-             pdsex, 
+             pdsex,
+             pdlen, #added
              catnum) %>%
     summarise(dummy_var = sum(numlen)) %>% 
     na.omit()
@@ -158,10 +164,12 @@ getHydraDiet <- function(focalspp, survstrat){
              station, 
              year,
              season,
-             svspp) %>%
+             svspp,
+             pdlen) %>% #added
     summarise(rcatnum = sum(catnum, na.rm = TRUE)) %>%
     na.omit() %>%
-    left_join(num_strat,  by = c("cruise6", "station", "year", "season", "svspp")) %>% 
+    left_join(num_strat,  by = c("cruise6", "station", "year", "season", "svspp",
+                                 "pdlen")) %>% #added
     mutate(rcatnum = ifelse(svspp != 13 | svspp != 15, 
                             catnum, 
                             rcatnum))
@@ -171,7 +179,8 @@ getHydraDiet <- function(focalspp, survstrat){
              year,
              season, 
              svspp, 
-             pdsex, 
+             pdsex,
+             pdlen, #added
              tot_tows_spp_stratum,
              tot_catnum_stratum,
              tot_catwgt_stratum) %>%
@@ -185,7 +194,8 @@ getHydraDiet <- function(focalspp, survstrat){
              stratum, 
              year,
              season,
-             svspp) %>% 
+             svspp,
+             pdlen) %>% #added
     summarise(tot_tows_spp_stratum = max(tot_tows_spp_stratum, na.rm = TRUE))
   
   sum_rcatstratum <- sum_catstratum %>%
@@ -193,15 +203,18 @@ getHydraDiet <- function(focalspp, survstrat){
              stratum, 
              year,
              season,
-             svspp) %>%
+             svspp,
+             pdlen) %>% #added
     summarise(rtot_catnum_stratum = sum(tot_catnum_stratum, na.rm = TRUE),
               rtot_catwgt_stratum = sum(tot_catwgt_stratum, na.rm = TRUE)) %>% 
     na.omit() %>%
-    left_join(max_tot_tows_spp_stratum, by = c("cruise6", "stratum", "year", "season", "svspp")) %>%
+    left_join(max_tot_tows_spp_stratum, by = c("cruise6", "stratum", "year", "season", "svspp",
+                                               "pdlen")) %>% #added
     rename(rtot_tows_spp_stratum = tot_tows_spp_stratum)
   
   final_strat <- sum_rcatstratum %>%
-    left_join(sum_catnum, by = c("cruise6", "stratum", "year", "season", "svspp")) %>% 
+    left_join(sum_catnum, by = c("cruise6", "stratum", "year", "season", "svspp",
+                                 "pdlen")) %>% #added
     mutate(rtot_catnum_stratum = ifelse(svspp != 13 | svspp != 15, 
                                         tot_catnum_stratum, 
                                         rtot_catnum_stratum),
@@ -240,7 +253,8 @@ getHydraDiet <- function(focalspp, survstrat){
              station, 
              year, 
              season, 
-             svspp) %>%
+             svspp,
+             pdlen) %>% #added
     summarise(nostom = n())
   
   py_list <- data.frame(tax = unique(py_raw$tax),
@@ -248,7 +262,8 @@ getHydraDiet <- function(focalspp, survstrat){
   
   
   py_all <- py_nostom %>%
-    left_join(py_raw, by = c("cruise6", "station", "year", "season", "svspp")) %>% 
+    left_join(py_raw, by = c("cruise6", "station", "year", "season", "svspp",
+                             "pdlen")) %>% #added
     left_join(py_list, by = "tax")
   
   
@@ -294,7 +309,8 @@ getHydraDiet <- function(focalspp, survstrat){
   trans_ply <- fish_ply %>%
     group_by(cruise6, stratum, station,
              year, season, 
-             svspp, rcatnum,
+             svspp, pdlen, #added
+             rcatnum,
              rtot_catnum_stratum, 
              rtot_catwgt_stratum,
              rtot_tows_spp_stratum,
@@ -305,7 +321,8 @@ getHydraDiet <- function(focalspp, survstrat){
   pysum_wm <- trans_ply %>%
     group_by(cruise6, stratum, station, 
              year, season,
-             svspp, rcatnum, 
+             svspp, pdlen, #added
+             rcatnum, 
              rtot_catnum_stratum,
              rtot_tows_spp_stratum,
              stratum_area, pycode) %>% 
@@ -315,7 +332,8 @@ getHydraDiet <- function(focalspp, survstrat){
   pysum_m <- pysum_wm %>%
     group_by(cruise6, stratum, station,
              year, season,
-             svspp, rcatnum,
+             svspp, pdlen, #added
+             rcatnum,
              rtot_catnum_stratum,
              rtot_tows_spp_stratum,
              stratum_area,
@@ -327,7 +345,7 @@ getHydraDiet <- function(focalspp, survstrat){
   pysum_wm_s <- pysum_m %>%
     group_by(cruise6, stratum, 
              year, season,
-             svspp,
+             svspp, pdlen, #added
              rtot_catnum_stratum,
              rtot_tows_spp_stratum,
              stratum_area, 
@@ -337,7 +355,7 @@ getHydraDiet <- function(focalspp, survstrat){
   musw_strat_ply <- pysum_wm_s %>% 
     group_by(cruise6, stratum, 
              year, season,
-             svspp,
+             svspp, pdlen, #added
              rtot_catnum_stratum,
              rtot_tows_spp_stratum,
              stratum_area, 
@@ -352,12 +370,13 @@ getHydraDiet <- function(focalspp, survstrat){
     mutate(munfish_strat = rtot_catnum_stratum / rtot_tows_spp_stratum) %>%
     select(cruise6, stratum,
            year, season,
-           svspp, munfish_strat)
+           svspp, pdlen, #added
+           munfish_strat)
   
   
   #weight by stratum area
   pymean_strat <- musw_strat_ply %>% 
-    group_by(svspp, year, season,
+    group_by(svspp, year, season, pdlen, #added
              pycode) %>% 
     summarize(msw_strat = weighted.mean(musw_strat, stratum_area, na.rm = TRUE),
               m_nfish_strat = weighted.mean(munfish_strat, stratum_area, na.rm = TRUE),
@@ -365,11 +384,13 @@ getHydraDiet <- function(focalspp, survstrat){
   
   
   meansw_s_ply <- pymean_strat %>% 
-    group_by(svspp, year, season, pycode) %>%
+    group_by(svspp, year, season, pdlen, #added
+             pycode) %>%
     summarize(meansw_s = msw_strat/m_nfish_strat)
   
   meansw_ply <- pysum_m %>% 
-    group_by(svspp, year, season, pycode) %>%
+    group_by(svspp, year, season, pdlen, #added
+             pycode) %>%
     summarize(meansw = weighted.mean(musw, rcatnum, na.rm = TRUE),
               num_tows = n())
   
@@ -386,18 +407,21 @@ getHydraDiet <- function(focalspp, survstrat){
            prod_cov = (rcatnum - m_nfish_strat) * (musw2 - musw_strat))# %>% 
   
   mprod_mnumfish2_ply <- master_ply %>%
-    group_by(svspp, year, season, pycode) %>%
+    group_by(svspp, year, season, pdlen, #added
+             pycode) %>%
     summarize(mprod = mean(prod, na.rm = TRUE),
               mnumfish = mean(rcatnum, na.rm = TRUE))
   
   new4_ply <- master_ply %>% 
-    group_by(svspp, year, season, pycode) %>% 
+    group_by(svspp, year, season, 
+             pdlen, #added
+             pycode) %>% 
     summarize(sprod = sum(prod, na.rm = TRUE),
               mprod = mean(prod, na.rm = TRUE),
               mnumfish = mean(rcatnum, na.rm = TRUE))
   
   new6_ply <- master_ply %>% 
-    group_by(svspp, year, season,
+    group_by(svspp, year, season, pdlen, #added
              pycode, cruise6, stratum,
              stratum_area, rtot_tows_spp_stratum,
              m_nfish_strat) %>%
@@ -420,7 +444,8 @@ getHydraDiet <- function(focalspp, survstrat){
                                  0))
   
   sumvarprod_ply <- new6_ply %>% 
-    group_by(svspp, year, season, pycode) %>%
+    group_by(svspp, year, season, pdlen, #added
+             pycode) %>%
     summarize(svarprodf = sum(varprodf, na.rm = TRUE),
               svarprodd = sum(varprodd, na.rm = TRUE),
               svarprod_cov = sum(varprod_cov, na.rm = TRUE),
@@ -449,7 +474,8 @@ getHydraDiet <- function(focalspp, survstrat){
                           0),
            cv_s = ifelse(num_tows > 1 & mnumfish != 0 & meansw != 0 & m_nfish_strat != 0 & meansw_s != 0,
                          ((var_s)^0.5)/meansw_s,0)) %>% 
-    select(pycode, svspp, year, season, meansw,
+    select(pycode, svspp, year, season, pdlen, #added 
+           meansw,
            meansw_s, num_tows, m_nfish_strat, num_stra, 
            variance, cv, var_s, cv_s, pycode) %>% 
     distinct(.keep_all = TRUE)
@@ -458,7 +484,7 @@ getHydraDiet <- function(focalspp, survstrat){
     mutate(pycode = as.factor(pycode)) %>% 
     left_join(py_list) %>% 
     left_join(nstom_df) %>% 
-    group_by(svspp, year, season) %>% 
+    group_by(svspp, year, season, pdlen) %>% #added
     mutate(totwt = sum(meansw, na.rm = TRUE),
            totwt_s = sum(meansw_s, na.rm = TRUE),
            relmsw = 100*(meansw/totwt),
@@ -467,7 +493,8 @@ getHydraDiet <- function(focalspp, survstrat){
            relci = (ci/totwt)*100,
            ci_s = sqrt(var_s/num_tows)*2,
            relci_s = (ci_s/totwt_s)*100) %>% 
-    select(svspp, year, season, meansw, num_tows,
+    select(svspp, year, season, pdlen, #added
+           meansw, num_tows,
            variance, cv, prey = tax, totwt, 
            relmsw, ci, relci, nstom)
   
