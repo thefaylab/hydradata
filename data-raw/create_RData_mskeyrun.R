@@ -80,7 +80,24 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     
     GBsurvstrata  <- c(1090, 1130:1210, 1230, 1250, 3460, 3480, 3490, 3520:3550)
     
-    survdiet <- getHydraDiet(focalspp, GBsurvstrata)
+    survdietlen <- getHydraDiet(focalspp, GBsurvstrata)
+    # next for surveydiet
+    #join with focalspp to get svspp --> names
+    #sum meansw from pdlen into lenbins for each pred to get proportion
+    #cv calculation complicated, redo variance calc per length bin 
+    survdiet <- final_ply %>%
+      dplyr::filter(year %in% modyears) %>%
+      dplyr::mutate(vessel = dplyr::case_when(year<2009 ~ "Albatross",
+                                              year>=2009 ~ "Bigelow", 
+                                              TRUE ~ as.character(NA)),
+                    survey = paste(vessel, season)) %>%
+      dplyr::left_join(focalspp, by = c("svspp" = "SVSPP")) %>%
+      dplyr::mutate(ModSim = "Actual",
+                    Code = SPECIES_ITIS,
+                    Name = modelName) %>%
+      dplyr::select(ModSim, year, Code, Name, survey, pdlen, 
+                    meansw, num_tows, variance, cv, prey, totwt, relmsw,
+                    ci, relci, nstom)
     
     survtempdat <- ecodata::bottom_temp %>% 
       dplyr::filter(EPU == "GB",
