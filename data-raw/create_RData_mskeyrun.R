@@ -19,6 +19,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     survlen <- mskeyrun::simSurveyLencomp
     survagelen <- mskeyrun::simSurveyAgeLencomp
     survdiet <- mskeyrun::simSurveyDietcomp
+    survdietlen <- NULL
     survtemp <- mskeyrun::simSurveyBottemp
     survbiopar <- mskeyrun::simBiolPar
     fishindex <- mskeyrun::simCatchIndex
@@ -32,12 +33,12 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
   
     focalspp <- mskeyrun::focalSpecies %>%
       dplyr::filter(modelName != "Pollock") %>% # not using in these models
-      dplyr::mutate(Name = modelName)
+      dplyr::mutate(Name = modelName) 
     
     # single index, use if fitting to two not working
     survindex.all <- mskeyrun::surveyIndex %>%
       dplyr::filter(YEAR %in% modyears) %>%
-      dplyr::left_join(focalspp) %>%
+      dplyr::left_join(focalspp %>% dplyr::select(-NESPP3) %>% dplyr::distinct()) %>%
       dplyr::mutate(ModSim = "Actual",
                     year = YEAR,
                     Code = SPECIES_ITIS,
@@ -47,7 +48,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
 
     survindex.AL <- mskeyrun::surveyIndexA4 %>%
       dplyr::filter(YEAR %in% modyears) %>%
-      dplyr::left_join(focalspp) %>%
+      dplyr::left_join(focalspp %>% dplyr::select(-NESPP3) %>% dplyr::distinct()) %>%
       dplyr::mutate(ModSim = "Actual",
                     year = YEAR,
                     Code = SPECIES_ITIS,
@@ -57,7 +58,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
 
     survindex.HB <- mskeyrun::surveyIndexHB %>%
       dplyr::filter(YEAR %in% modyears) %>%
-      dplyr::left_join(focalspp) %>%
+      dplyr::left_join(focalspp %>% dplyr::select(-NESPP3) %>% dplyr::distinct()) %>%
       dplyr::mutate(ModSim = "Actual",
                     year = YEAR,
                     Code = SPECIES_ITIS,
@@ -66,7 +67,10 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       dplyr::select(ModSim, year, Code, Name, survey, variable, value, units)
     
     # try to fit separately
-    survindex <- dplyr::bind_rows(survindex.AL, survindex.HB)
+    survindex <- dplyr::bind_rows(survindex.AL, survindex.HB) 
+    
+    # rename for functions below
+    survindex$variable <- stringr::str_replace_all(survindex$variable, "strat.biomass", "biomass")
     
     survlen <- mskeyrun::realSurveyLennumcomp %>%
       dplyr::filter(year %in% modyears) %>%
@@ -78,27 +82,34 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     
     survagelen <- NULL #diet already has length in it
     
-    GBsurvstrata  <- c(1090, 1130:1210, 1230, 1250, 3460, 3480, 3490, 3520:3550)
+    #GBsurvstrata  <- c(1090, 1130:1210, 1230, 1250, 3460, 3480, 3490, 3520:3550)
     
-    survdietlen <- getHydraDiet(focalspp, GBsurvstrata)
-    # next for surveydiet
-    #join with focalspp to get svspp --> names
-    #sum meansw from pdlen into lenbins for each pred to get proportion
-    #cv calculation complicated, redo variance calc per length bin 
-    survdiet <- final_ply %>%
+    focalprey <- focalspp %>%
+      dplyr::select(-NESPP3) %>%
+      dplyr::distinct() %>%
+      dplyr::select(SCIENTIFIC_NAME, SPECIES_ITIS, Name)
+    
+    survdiet <- mskeyrun::surveyDietcomp %>%
       dplyr::filter(year %in% modyears) %>%
       dplyr::mutate(vessel = dplyr::case_when(year<2009 ~ "Albatross",
                                               year>=2009 ~ "Bigelow", 
                                               TRUE ~ as.character(NA)),
-                    survey = paste(vessel, season)) %>%
-      dplyr::left_join(focalspp, by = c("svspp" = "SVSPP")) %>%
-      dplyr::mutate(ModSim = "Actual",
-                    Code = SPECIES_ITIS,
-                    Name = modelName) %>%
-      dplyr::select(ModSim, year, Code, Name, survey, pdlen, 
-                    meansw, num_tows, variance, cv, prey, totwt, relmsw,
-                    ci, relci, nstom)
+                    survey = paste(vessel, season),
+                    agecl = NA) %>%
+      dplyr::left_join(focalprey, by=c("prey" = "SCIENTIFIC_NAME")) %>%
+      dplyr::rename(preySci = prey,
+                    prey = Name.y,
+                    Name = Name.x) %>%
+      dplyr::filter(variable == "relmsw") %>%
+      dplyr::mutate(value = value/100)
     
+    survdietlen <- mskeyrun::surveyLenDietcomp %>%
+      dplyr::filter(year %in% modyears) %>%
+      dplyr::mutate(vessel = dplyr::case_when(year<2009 ~ "Albatross",
+                                              year>=2009 ~ "Bigelow", 
+                                              TRUE ~ as.character(NA)),
+                    survey = paste(vessel, season))
+ 
     survtempdat <- ecodata::bottom_temp %>% 
       dplyr::filter(EPU == "GB",
                     Time %in% modyears,
@@ -122,7 +133,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     
     survtemp <- dplyr::bind_rows(survtempfill, survtempdat)
     
-    survbiolpar <- mskeyrun::realBiolPar
+    survbiopar <- mskeyrun::realBiolPar
     
     fishindex <- mskeyrun::catchIndex %>%
       dplyr::filter(YEAR %in% modyears) %>%
@@ -137,7 +148,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     fishlen <- mskeyrun::realFisheryLencomp %>% #identical column names to sim, single fishery in real data
       dplyr::filter(year %in% modyears)
     
-    percapcons <- get_percapcons() # or put in mskeyrun
+    percapcons <- NULL # read existing csv of GB stomwt 
     
     startpars <- get_startpars() # or put in mskeyrun
   }
@@ -284,11 +295,12 @@ get_DatData_msk <- function(nlenbin,
     dplyr::filter(prey %in% unique(species)) %>%
     dplyr::select(species, agecl, year, prey, value) %>%
     dplyr::group_by(species, prey) %>%
-    dplyr::summarise(avgpreyprop = mean(value)) 
+    dplyr::summarise(avgpreyprop = mean(value, na.rm=T)) 
   
   neverprey <- setdiff(predPrey$species, predPrey$prey)
   
-  foodweb <- dplyr::left_join(focalspp, predPrey, by=c("Name" = "species")) %>%
+  foodweb <- dplyr::left_join(focalspp %>% dplyr::select(Name) %>% dplyr::distinct(), 
+                              predPrey, by=c("Name" = "species")) %>%
     dplyr::select(species=Name, prey, avgpreyprop) %>%
     dplyr::mutate(avgpreyprop = ceiling(avgpreyprop)) %>%
     tidyr::spread(species, avgpreyprop) %>%
@@ -299,7 +311,11 @@ get_DatData_msk <- function(nlenbin,
   predOrPrey <- ifelse(colSums(foodweb[-1])>0, 1, 0)
   
   # list of species and guilds (Functional Groups)hydr
-  speciesList <- focalspp[order(focalspp$Name),] %>%
+  #speciesList <- focalspp[order(focalspp$Name),] %>%
+  speciesList <- focalspp %>% 
+    dplyr::select(Name) %>% 
+    dplyr::distinct() %>% 
+    dplyr::arrange(Name) %>%
     dplyr::mutate(species = Name,
                   guild = seq(1:length(Name)),
                   guildmember = seq(1:length(Name)),)
