@@ -26,6 +26,20 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     fishlen <- mskeyrun::simFisheryLencomp
     percapcons <- mskeyrun::simPerCapCons
     startpars <- mskeyrun::simStartPars
+    
+    fleetdef <- focalspp %>%
+      dplyr::mutate(species = Name) %>%
+      dplyr::arrange(species) %>%
+      dplyr::mutate(allcombined = dplyr::case_when(species %in% c("Long_rough_dab", "Polar_cod") ~ 0,
+                                                   TRUE ~ 1)) %>%
+      dplyr::mutate(allbutcod = dplyr::case_when(species=="North_atl_cod" ~ 0,
+                                                 TRUE ~ allcombined),
+                    codfleet = dplyr::case_when(species=="North_atl_cod" ~ 2,
+                                                TRUE ~ 0),
+                    qind = allbutcod + codfleet,
+                    codfleet = codfleet/2) %>%
+      dplyr::select(species, allbutcod, codfleet, qind)
+    
   }
 
   if(dattype == "real"){
@@ -71,9 +85,21 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     
     # rename for functions below
     survindex$variable <- stringr::str_replace_all(survindex$variable, "strat.biomass", "biomass")
+
+    # get cv = stdev/bio = sqrt(variance)/bio
+    survindex <- survindex %>%
+      dplyr::filter(variable %in% c("biomass", "biomass.var")) %>%
+      dplyr::select(-units) %>%
+      tidyr::pivot_wider(names_from = "variable", values_from = "value") %>%
+      dplyr::mutate(cv = sqrt(biomass.var)/biomass) %>%
+      dplyr::select(-biomass.var) %>%
+      tidyr::pivot_longer(c(biomass, cv), names_to = "variable", values_to = "value") %>%
+      dplyr::mutate(units = ifelse(variable=="biomass", "kg tow^-1", "unitless"))
     
+    # need to add sample size for lengths from mskeyrun::surveyLenSampN
     survlen <- mskeyrun::realSurveyLennumcomp %>%
-      dplyr::filter(year %in% modyears) %>%
+      dplyr::filter(year %in% modyears,
+                    variable == "numbers") %>%
       dplyr::mutate(vessel = dplyr::case_when(year<2009 ~ "Albatross",
                                               year>=2009 ~ "Bigelow", 
                                               TRUE ~ as.character(NA)),
@@ -135,6 +161,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     
     survbiopar <- mskeyrun::realBiolPar
     
+    # need to have landings + discards = catch
     fishindex <- mskeyrun::catchIndex %>%
       dplyr::filter(YEAR %in% modyears) %>%
       dplyr::left_join(focalspp %>% dplyr::mutate(NESPP3 = as.integer(NESPP3))) %>%
@@ -146,11 +173,29 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       dplyr::select(ModSim, year, Code, Name, fishery, variable, value, units)
     
     fishlen <- mskeyrun::realFisheryLencomp %>% #identical column names to sim, single fishery in real data
-      dplyr::filter(year %in% modyears)
+      dplyr::filter(year %in% modyears) %>%
+      dplyr::filter(lenbin < 250) #temporary fix to remove goosefish lenbin 347
     
     percapcons <- NULL # read existing csv of GB stomwt 
     
     startpars <- get_startpars() # or put in mskeyrun
+    
+    #fix for real species simplest allocation: mackerel herring fleet 1 all else fleet 2
+    fleetdef <- focalspp %>%
+      dplyr::select(-NESPP3) %>% 
+      dplyr::distinct() %>%
+      dplyr::mutate(species = Name) %>%
+      dplyr::arrange(species) %>%
+      dplyr::mutate(pelagic = dplyr::case_when(species %in% c("Atlantic_herring",
+                                                              "Atlantic_mackerel") ~ 2,
+                                                 TRUE ~ 0),
+                    demersal = dplyr::case_when(!species %in% c("Atlantic_herring",
+                                                               "Atlantic_mackerel") ~ 1,
+                                                TRUE ~ 0),
+                    qind = pelagic + demersal,
+                    pelagic = pelagic/2) %>%
+      dplyr::select(species, pelagic, demersal, qind)
+    
   }
   
   # calculate model length bins for both pin and dat
@@ -478,21 +523,9 @@ get_DatData_msk <- function(nlenbin,
   d$observedSurvSize <- obsSurvSize 
   
   # observed catch biomass
-  # need fleet defs first. the user may need to set these up
+  # need fleet defs first. the user will need to set these up above
   # WARNING currently hardcoded for 2 NOBA sim fleets
   
-  fleetdef <- focalspp %>%
-    dplyr::mutate(species = Name) %>%
-    dplyr::arrange(species) %>%
-    dplyr::mutate(allcombined = dplyr::case_when(species %in% c("Long_rough_dab", "Polar_cod") ~ 0,
-                                          TRUE ~ 1)) %>%
-    dplyr::mutate(allbutcod = dplyr::case_when(species=="North_atl_cod" ~ 0,
-                                        TRUE ~ allcombined),
-                  codfleet = dplyr::case_when(species=="North_atl_cod" ~ 2,
-                                       TRUE ~ 0),
-                  qind = allbutcod + codfleet,
-                  codfleet = codfleet/2) %>%
-    dplyr::select(species, allbutcod, codfleet, qind)
   
   # new long format
   obsCatch <- fishindex %>%
