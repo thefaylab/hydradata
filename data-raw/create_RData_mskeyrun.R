@@ -160,27 +160,8 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     survtemp <- dplyr::bind_rows(survtempfill, survtempdat)
     
     survbiopar <- mskeyrun::realBiolPar
-    
-    # need to have landings + discards = catch
-    fishindex <- mskeyrun::catchIndex %>%
-      dplyr::filter(YEAR %in% modyears) %>%
-      dplyr::left_join(focalspp %>% dplyr::mutate(NESPP3 = as.integer(NESPP3))) %>%
-      dplyr::mutate(ModSim = "Actual",
-                    year = YEAR,
-                    Code = SPECIES_ITIS,
-                    Name = modelName,
-                    fishery = "total catch") %>%
-      dplyr::select(ModSim, year, Code, Name, fishery, variable, value, units)
-    
-    fishlen <- mskeyrun::realFisheryLencomp %>% #identical column names to sim, single fishery in real data
-      dplyr::filter(year %in% modyears) %>%
-      dplyr::filter(lenbin < 250) #temporary fix to remove goosefish lenbin 347
-    
-    percapcons <- NULL # read existing csv of GB stomwt 
-    
-    startpars <- get_startpars() # or put in mskeyrun
-    
-    #fix for real species simplest allocation: mackerel herring fleet 1 all else fleet 2
+
+    #fix for real species simplest allocation: mackerel herring fleet 2 all else fleet 1
     fleetdef <- focalspp %>%
       dplyr::select(-NESPP3) %>% 
       dplyr::distinct() %>%
@@ -188,14 +169,39 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       dplyr::arrange(species) %>%
       dplyr::mutate(pelagic = dplyr::case_when(species %in% c("Atlantic_herring",
                                                               "Atlantic_mackerel") ~ 2,
-                                                 TRUE ~ 0),
+                                               TRUE ~ 0),
                     demersal = dplyr::case_when(!species %in% c("Atlantic_herring",
-                                                               "Atlantic_mackerel") ~ 1,
+                                                                "Atlantic_mackerel") ~ 1,
                                                 TRUE ~ 0),
                     qind = pelagic + demersal,
                     pelagic = pelagic/2) %>%
       dplyr::select(species, pelagic, demersal, qind)
     
+    # need to have landings + discards = catch
+    fishindex <- mskeyrun::catchIndex %>%
+      dplyr::filter(YEAR %in% modyears) %>%
+      dplyr::left_join(focalspp %>% dplyr::mutate(NESPP3 = as.integer(NESPP3))) %>%
+      dplyr::left_join(fleetdef, by=c("Name" = "species")) %>%
+      dplyr::mutate(ModSim = "Actual",
+                    year = YEAR,
+                    Code = SPECIES_ITIS,
+                    Name = modelName,
+                    fishery = qind) %>%
+      dplyr::select(ModSim, year, Code, Name, fishery, variable, value, units)
+    
+    fishlen <- mskeyrun::realFisheryLencomp %>% #identical column names to sim, single fishery in real data
+      dplyr::filter(year %in% modyears) %>%
+      dplyr::mutate(Code = as.character(Code)) %>%
+      dplyr::left_join(focalspp %>% dplyr::select(-NESPP3) %>% dplyr::distinct(), by=c("Name" = "LongName", "Code" = "SPECIES_ITIS")) %>%
+      dplyr::mutate(Name = modelName) %>%
+      dplyr::left_join(fleetdef, by=c("Name" = "species")) %>%
+      dplyr::mutate(fishery = qind) %>%
+      dplyr::select(ModSim, year, Code, Name, fishery, lenbin, variable, value, units) %>%
+      dplyr::filter(lenbin < 250) #temporary fix to remove goosefish lenbin 347
+    
+    percapcons <- NULL # read existing csv of GB stomwt 
+    
+    startpars <- NULL # read existing csvs of Y1N and avgrec
   }
   
   # calculate model length bins for both pin and dat
