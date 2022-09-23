@@ -18,12 +18,14 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     survindex <- mskeyrun::simSurveyIndex
     survlen <- mskeyrun::simSurveyLencomp
     survagelen <- mskeyrun::simSurveyAgeLencomp
+    survlensamp <- NULL
     survdiet <- mskeyrun::simSurveyDietcomp
     survdietlen <- NULL
     survtemp <- mskeyrun::simSurveyBottemp
     survbiopar <- mskeyrun::simBiolPar
     fishindex <- mskeyrun::simCatchIndex
     fishlen <- mskeyrun::simFisheryLencomp
+    fishlensamp <- NULL
     percapcons <- mskeyrun::simPerCapCons
     startpars <- mskeyrun::simStartPars
     
@@ -100,6 +102,9 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     survlen <- mskeyrun::realSurveyLennumcomp %>%
       dplyr::filter(year %in% modyears,
                     variable == "numbers") %>%
+      dplyr::mutate(Code = as.character(Code)) %>%
+      dplyr::left_join(focalspp %>% dplyr::select(-NESPP3) %>% dplyr::distinct(), by=c("Name" = "LongName", "Code" = "SPECIES_ITIS")) %>%
+      dplyr::mutate(Name = modelName) %>%
       dplyr::mutate(vessel = dplyr::case_when(year<2009 ~ "Albatross",
                                               year>=2009 ~ "Bigelow", 
                                               TRUE ~ as.character(NA)),
@@ -107,6 +112,16 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       dplyr::select(ModSim, year, Code, Name, survey, lenbin, variable, value, units)
     
     survagelen <- NULL #diet already has length in it
+    
+    survlensamp <- mskeyrun::surveyLenSampN %>%
+      dplyr::ungroup() %>%
+      dplyr::mutate(year = as.integer(YEAR),
+                    Code = as.character(SPECIES_ITIS),
+                    vessel = dplyr::case_when(SVVESSEL == "AL" ~ "Albatross",
+                                              SVVESSEL == "HB" ~ "Bigelow", 
+                                              TRUE ~ as.character(NA)),
+                    survey = paste(vessel, SEASON)) %>%
+      dplyr::select(year, Code, survey, lensampsize)
     
     #GBsurvstrata  <- c(1090, 1130:1210, 1230, 1250, 3460, 3480, 3490, 3520:3550)
     
@@ -181,6 +196,17 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     fishindex <- mskeyrun::catchIndex %>%
       dplyr::filter(YEAR %in% modyears) %>%
       dplyr::left_join(focalspp %>% dplyr::mutate(NESPP3 = as.integer(NESPP3))) %>%
+      dplyr::filter(!is.na(Name)) %>%
+      dplyr::select(-units) %>%
+      tidyr::pivot_wider(names_from = "variable", values_from = "value") %>%
+      dplyr::group_by(YEAR, Name) %>%
+      # note variable name `commerical landings` likely to change, currently using branch version
+      dplyr::mutate(catch = sum(`commerical landings`,`commercial discards`, na.rm = TRUE),
+                    cv = 0.05) %>%
+      dplyr::ungroup() %>%
+      # note variable name `commerical landings` likely to change, currently using branch version
+      tidyr::pivot_longer(c(`commerical landings`, `commercial discards`, catch, cv), names_to = "variable", values_to = "value") %>%
+      dplyr::mutate(units = ifelse(variable=="cv", "unitless", "metric tons")) %>%
       dplyr::left_join(fleetdef, by=c("Name" = "species")) %>%
       dplyr::mutate(ModSim = "Actual",
                     year = YEAR,
@@ -196,8 +222,13 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       dplyr::mutate(Name = modelName) %>%
       dplyr::left_join(fleetdef, by=c("Name" = "species")) %>%
       dplyr::mutate(fishery = qind) %>%
-      dplyr::select(ModSim, year, Code, Name, fishery, lenbin, variable, value, units) %>%
-      dplyr::filter(lenbin < 250) #temporary fix to remove goosefish lenbin 347
+      dplyr::select(ModSim, year, Code, Name, fishery, lenbin, variable, value, units) #%>%
+      #dplyr::filter(lenbin < 250) #temporary fix to remove goosefish lenbin 347
+    
+    fishlensamp <- mskeyrun::fisheryLenSampN %>%
+      dplyr::mutate(year = as.integer(YEAR),
+                    Code = as.character(SPECIES_ITIS)) %>%
+      dplyr::select(year, Code, lensampsize)
     
     percapcons <- NULL # read existing csv of GB stomwt 
     
@@ -500,28 +531,59 @@ get_DatData_msk <- function(nlenbin,
   
   modbins <- bindef$modbins
   
-  obsSurvSize <- survlen %>%
-    dplyr::mutate(species = Name) %>%
-    dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
-    dplyr::select(species,  year, survey, lenbin, value) %>%
-    dplyr::left_join(modbins) %>%
-    dplyr::filter(modbin.min <= lenbin & lenbin < modbin.max) %>% #lenbin defined as lower
-    dplyr::group_by(species, year, survey, sizebin) %>%
-    dplyr::summarise(sumlen = sum(value)) %>%
-    tidyr::spread(sizebin, sumlen) %>%
-    dplyr::ungroup() %>%
-    dplyr::mutate(inpN = rowSums(.[,-(1:3)], na.rm = TRUE)) %>%
-    dplyr::mutate(type = 0) %>%
-    dplyr::mutate(dplyr::across(c(dplyr::contains("sizebin")), ~./inpN)) %>%
-    dplyr::select(survey, year, species, type, inpN, everything()) %>%
-    dplyr::arrange(survey)
+  if(is.null(survlensamp)) {
+    
+    obsSurvSize <- survlen %>%
+      dplyr::mutate(species = Name) %>%
+      dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
+      dplyr::select(species,  year, survey, lenbin, value) %>%
+      dplyr::left_join(modbins) %>%
+      dplyr::filter(modbin.min <= lenbin & lenbin < modbin.max) %>% #lenbin defined as lower
+      dplyr::group_by(species, year, survey, sizebin) %>%
+      dplyr::summarise(sumlen = sum(value)) %>%
+      tidyr::spread(sizebin, sumlen) %>%
+      dplyr::ungroup() %>%
+      dplyr::mutate(inpN = rowSums(.[,-(1:3)], na.rm = TRUE)) %>%
+      dplyr::mutate(type = 0) %>%
+      dplyr::mutate(dplyr::across(c(dplyr::contains("sizebin")), ~./inpN)) %>%
+      dplyr::select(survey, year, species, type, inpN, everything()) %>%
+      dplyr::arrange(survey)
+    
+    # use -999 for missing value
+    obsSurvSize <- obsSurvSize %>%
+      replace(is.na(.),-999)
+    
+    # WARNING currently hardcoded cap inpN at 1000
+    obsSurvSize$inpN[obsSurvSize$inpN > 1000] <- 1000
+    
+  }
   
-  # use -999 for missing value
-  obsSurvSize <- obsSurvSize %>%
-    replace(is.na(.),-999)
-  
-  # WARNING currently hardcoded cap inpN at 1000
-  obsSurvSize$inpN[obsSurvSize$inpN > 1000] <- 1000
+  if(!is.null(survlensamp)) {
+    
+    obsSurvSize <- survlen %>%
+      dplyr::mutate(species = Name) %>%
+      dplyr::select(species,  Code, year, survey, lenbin, value) %>%
+      dplyr::left_join(modbins) %>%
+      dplyr::filter(modbin.min <= lenbin & lenbin < modbin.max) %>% #lenbin defined as lower
+      dplyr::group_by(species, Code, year, survey, sizebin) %>%
+      dplyr::summarise(sumlen = sum(value)) %>%
+      tidyr::spread(sizebin, sumlen) %>%
+      dplyr::ungroup() %>%
+      dplyr::mutate(totN = rowSums(.[,-(1:4)], na.rm = TRUE)) %>%
+      dplyr::left_join(survlensamp) %>%
+      dplyr::rename(inpN = lensampsize) %>%
+      dplyr::mutate(type = 0) %>%
+      dplyr::mutate(dplyr::across(c(dplyr::contains("sizebin")), ~./totN)) %>%
+      dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
+      dplyr::select(-totN) %>%
+      dplyr::select(survey, year, species, type, inpN, everything()) %>%
+      dplyr::arrange(survey)
+    
+    # use -999 for missing value
+    obsSurvSize <- obsSurvSize %>%
+      replace(is.na(.),-999)
+    
+  }
   
   d$Nsurvey_size_obs <- dim(obsSurvSize)[1]
   obsSurvSize$survey <- as.numeric(as.factor(obsSurvSize$survey))
@@ -554,11 +616,13 @@ get_DatData_msk <- function(nlenbin,
   obsCatch$species <- speciesList$speciesNum[match(unlist(obsCatch$species), speciesList$species)]
   d$observedCatch <- obsCatch
   
+  
+  if(is.null(fishlensamp)){
+    
   # observed catch size composition
   obsCatchSize <- fishlen %>%
     dplyr::mutate(species = Name) %>%
-    dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
-    dplyr::select(species,  year, lenbin, value) %>%
+    dplyr::select(species, year, lenbin, value) %>%
     dplyr::left_join(modbins) %>%
     dplyr::filter(modbin.min <= lenbin & lenbin < modbin.max) %>% #lenbin defined as lower
     dplyr::group_by(species, year, sizebin) %>%
@@ -571,8 +635,42 @@ get_DatData_msk <- function(nlenbin,
     dplyr::rename(fishery = qind) %>%
     dplyr::mutate(area = 1) %>%
     dplyr::mutate(dplyr::across(c(dplyr::contains("sizebin")), ~./inpN)) %>%
+    dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
     dplyr::select(fishery, area, year, species, type, inpN, everything()) %>%
     dplyr::arrange(fishery, area, species, year)
+  
+  # cap inpN at 1000
+  obsCatchSize$inpN[obsCatchSize$inpN > 1000] <- 1000
+  }
+  
+  
+  if(!is.null(fishlensamp)){
+    
+    # observed catch size composition
+    obsCatchSize <- fishlen %>%
+      dplyr::mutate(species = Name) %>%
+      dplyr::select(species, Code, year, lenbin, value) %>%
+      dplyr::left_join(modbins) %>%
+      dplyr::filter(modbin.min <= lenbin & lenbin < modbin.max) %>% #lenbin defined as lower
+      dplyr::group_by(species, year, sizebin) %>%
+      dplyr::summarise(sumlen = sum(value)) %>%
+      tidyr::spread(sizebin, sumlen) %>%
+      dplyr::ungroup() %>%
+      dplyr::mutate(totN = rowSums(.[,-(1:4)], na.rm = TRUE)) %>%
+      dplyr::left_join(fishlensamp) %>%
+      dplyr::rename(inpN = lensampsize) %>%
+      dplyr::mutate(type = 0) %>%
+      dplyr::left_join(fleetdef) %>%
+      dplyr::rename(fishery = qind) %>%
+      dplyr::mutate(area = 1) %>%
+      dplyr::mutate(dplyr::across(c(dplyr::contains("sizebin")), ~./totN)) %>%
+      dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
+      dplyr::select(-totN, -Code, -pelagic, -demersal) %>%
+      dplyr::select(fishery, area, year, species, type, inpN, everything()) %>%
+      dplyr::arrange(fishery, area, species, year)
+    
+  }
+  
   
   #add back columns with no lengths as NAs
   missing <- setdiff(modbins$sizebin, names(obsCatchSize))
@@ -584,8 +682,6 @@ get_DatData_msk <- function(nlenbin,
   obsCatchSize <- obsCatchSize %>%
     replace(is.na(.),-999)
   
-  # cap inpN at 1000
-  obsCatchSize$inpN[obsCatchSize$inpN > 1000] <- 1000
   
   d$Ncatch_size_obs <- dim(obsCatchSize)[1]
   obsCatchSize$fishery <- as.numeric(as.factor(obsCatchSize$fishery))
