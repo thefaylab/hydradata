@@ -691,6 +691,8 @@ get_DatData_msk <- function(nlenbin,
   # observed survey diet proportion by weight
   # for simulated diet! need different function for real diet that is by length
   # need length comp by age to get diet at length
+  
+  if(!is.null(survagelen)) {
   svagelenbin <- survagelen %>%
     dplyr::mutate(species = Name) %>%
     dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
@@ -713,6 +715,10 @@ get_DatData_msk <- function(nlenbin,
     tidyr::spread(prey, dietsize) %>%
     dplyr::ungroup() %>%
     dplyr::filter(!is.na(sizebin)) 
+  
+  }
+  
+  # need code for real diet data here
   
   # add back any modeled species that weren't prey so they show up as columns
   missedpreds <- setdiff(unique(modbins$species), names(obsSurvDiet)[-(1:4)])
