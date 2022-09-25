@@ -719,6 +719,38 @@ get_DatData_msk <- function(nlenbin,
   }
   
   # need code for real diet data here
+  if(is.null(survagelen)){
+    
+    lenbintots <- survdietlen %>%
+      dplyr::mutate(species = Name) %>%
+      dplyr::filter(variable %in% c("totwt")) %>%
+      dplyr::mutate(prey = "ALL") %>%
+      dplyr::distinct() %>%
+      tidyr::pivot_wider(names_from = variable, values_from = value) %>%
+      dplyr::left_join(modbins) %>%
+      dplyr::filter(modbin.min <= pdlen & pdlen < modbin.max) %>%
+      dplyr::group_by(species, survey, year, sizebin) %>%
+      dplyr::summarise(totwtsize = sum(totwt, na.rm = TRUE))
+    
+    obsSurvDiet <- survdietlen %>%
+      dplyr::mutate(species = Name) %>%
+      dplyr::filter(variable %in% c("meansw")) %>%
+      tidyr::pivot_wider(names_from = variable, values_from = value) %>%
+      dplyr::left_join(modbins) %>%
+      dplyr::filter(modbin.min <= pdlen & pdlen < modbin.max) %>%
+      dplyr::group_by(species, survey, year, sizebin, prey) %>%
+      dplyr::summarise(dietwtsize = sum(meansw, na.rm = TRUE)) %>%
+      dplyr::left_join(lenbintots) %>%
+      dplyr::mutate(dietsize = dietwtsize/totwtsize) %>%
+      dplyr::select(-dietwtsize, -totwtsize) %>%
+      dplyr::left_join(focalprey, by=c("prey" = "SCIENTIFIC_NAME")) %>%
+      dplyr::mutate(prey = Name) %>%
+      dplyr::filter(prey %in% unique(modbins$species)) %>% #drops prey that aren't our modeled species
+      tidyr::spread(prey, dietsize) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(-SPECIES_ITIS, -Name) %>%
+      dplyr::filter(!is.na(sizebin)) 
+  }
   
   # add back any modeled species that weren't prey so they show up as columns
   missedpreds <- setdiff(unique(modbins$species), names(obsSurvDiet)[-(1:4)])
