@@ -415,7 +415,7 @@ get_DatData_msk <- function(nlenbin,
   #singletons <- read.csv(paste0(path,"/singletons_NOBA.csv"),header=FALSE,row.names = 1)
   d$debugState <- 0
   d$Nyrs <- max(length(unique(survindex$year)), length(unique(fishindex$year)))
-  d$Nspecies <- length(focalspp$Name)
+  d$Nspecies <- length(unique(focalspp$Name))
   d$Nsizebins <- nlenbin
   d$Nareas <- 1
   d$Nfleets <- 2
@@ -776,7 +776,8 @@ get_DatData_msk <- function(nlenbin,
   
   # observed effort by fleet (dummy, not used in estimation model)
   # also hardcoded for current 2 fleets
-  fleetnames <- c("allbutcod", "codfleet")
+  #fleetnames <- c("allbutcod", "codfleet")
+  fleetnames <- names(fleetdef)[2:3]
   
   obsEffort <- data.frame(1:d$Nyrs,
                           matrix(1, d$Nyrs, d$Nfleets))
@@ -786,17 +787,28 @@ get_DatData_msk <- function(nlenbin,
   d$fleetNames <- (names(obsEffort)[2:(d$Nfleets+1)])
   
   # observed temperature
+  
+  if(is.null(survlensamp)) {
   # simulation using only fall: NOBA_BTS_fall_allbox_effic1
   obsTemp <- survtemp %>%
     dplyr::filter(survey=="BTS_fall_allbox_effic1") %>%
     dplyr::mutate(year = as.integer(year-fitstartyr)) %>% #year starts at 1
     dplyr::select(year, meantemp=value)
+  }
+  
+  if(!is.null(survlensamp)) {
+    obsTemp <- survtemp %>%
+      dplyr::mutate(year = as.integer(year-fitstartyr)) %>% #year starts at 1
+      dplyr::select(year, meantemp=value)
+  }
   
   d$observedTemperature <- t(obsTemp)
   
   # stomach weight
   # uses same length-age lookup as above to convert to length specific percapcons
   # takes mean across all years to get single vector
+  
+  if(!is.null(percapcons)){
   stomachContent <- percapcons %>%
     dplyr::mutate(species = Name) %>%
     dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
@@ -819,6 +831,25 @@ get_DatData_msk <- function(nlenbin,
     dplyr::group_by(species) %>%
     tidyr::fill(value, .direction = "updown") %>%
     tidyr::pivot_wider()
+  
+  }
+  
+  if(is.null(percapcons)) {
+    # original hydra_sim parameterization, reorder with mskeyrun names
+    stomachContent <- read.csv(paste0(path,"/intake_stomachContent.csv"),header=TRUE)
+    stomachContent$species <- c("Spiny_dogfish",
+                                "Winter_skate",
+                                "Atlantic_herring",
+                                "Atlantic_cod",
+                                "Haddock",
+                                "Yellowtail_flounder",
+                                "Winter_flounder",
+                                "Atlantic_mackerel",
+                                "Silver_hake",
+                                "Goosefish")
+    
+    stomachContent <-stomachContent[order(stomachContent$species),]
+  }
   
   d$intakeStomach <- as.matrix(stomachContent[,2:(d$Nsizebins+1)])
   
@@ -928,7 +959,27 @@ get_DatData_msk <- function(nlenbin,
   d$maturityCovEffects <- as.matrix(maturity_covEffects)
   
   # growth FIX THIS TO BE ESTIMATED IN A FUNCTION HERE
-  growth <- read.csv(paste0(path,"/growth_species_NOBA_era1_BTS_fall_allbox_effic1.csv"),header=TRUE,row.names=1)
+  if(is.null(survlensamp)){
+    growth <- read.csv(paste0(path,"/growth_species_NOBA_era1_BTS_fall_allbox_effic1.csv"),header=TRUE,row.names=1)
+  }
+  
+  if(!is.null(survlensamp)){
+    #original hydra_sim parameters, change to mskeyrun names and order
+    growth <- read.csv(paste0(path,"/growth_species.csv"),header=FALSE,row.names=1)
+    names(growth) <- c("Spiny_dogfish",
+                       "Winter_skate",
+                       "Atlantic_herring",
+                       "Atlantic_cod",
+                       "Haddock",
+                       "Yellowtail_flounder",
+                       "Winter_flounder",
+                       "Atlantic_mackerel",
+                       "Silver_hake",
+                       "Goosefish")
+    growth <- growth[-1,]
+    growth <- growth[,order(names(growth))]
+    
+  }
   d$growthPsi <- unlist(growth["psi",])
   d$growthKappa <- unlist(growth["kappa",])
   d$growthLinf <- unlist(growth["Linf",])
@@ -973,7 +1024,7 @@ get_DatData_msk <- function(nlenbin,
   
   # fishery catchability indicator (q's)
   indicatorFisheryqs<- fleetdef %>%
-    dplyr::select(allbutcod, codfleet)
+    dplyr::select(fleetnames)
   d$indicatorFisheryq<- as.matrix(t(indicatorFisheryqs))
   
   
@@ -1070,12 +1121,13 @@ get_PinData_msk <- function(nlenbin,
   p <- list()
   # path to data
   # list of species and guilds (Functional Groups)'
-  speciesList <- focalspp[order(focalspp$Name),]
-  Nspecies <- length(focalspp$Name)
+  speciesList <- focalspp[order(unique(focalspp$Name)),]
+  Nspecies <- length(unique(focalspp$Name))
   
   modbins <- bindef$modbins
   
   # starting length structure
+  if(!is.null(startpars)){
   Y1N <- startpars %>%
     dplyr::filter(variable=="Natlen") %>%
     dplyr::left_join(modbins, by=c("Name" = "species")) %>%
@@ -1088,6 +1140,24 @@ get_PinData_msk <- function(nlenbin,
     replace(is.na(.),0) %>% # use 0 for missing value in pin file
     dplyr::select(-Name) %>%
     as.matrix()
+  }
+  
+  if(is.null(startpars)){
+    # try original parameterization
+    Y1N <- read.csv(paste0(path,"/observation_Y1N.csv"),header=TRUE,row.names=1)
+    rownames(Y1N) <- c("Spiny_dogfish",
+                     "Winter_skate",
+                     "Atlantic_herring",
+                     "Atlantic_cod",
+                     "Haddock",
+                     "Yellowtail_flounder",
+                     "Winter_flounder",
+                     "Atlantic_mackerel",
+                     "Silver_hake",
+                     "Goosefish")
+    
+    Y1N <-Y1N[order(rownames(Y1N)),]
+  }
   
   rownames(Y1N) = sort.default(speciesList$Name)
   
@@ -1100,10 +1170,30 @@ get_PinData_msk <- function(nlenbin,
   p$recbeta <- rep(0.0, Nspecies)
   
   # Avg recruitment and deviations
+  if(!is.null(startpars)){
   redundantAvgRec <- startpars %>%
     dplyr::filter(variable=="AvgRec") %>%
     dplyr::select(Name, ln_avgrec=value) %>%
     tibble::column_to_rownames("Name") 
+  }
+  
+  if(is.null(startpars)){
+    redundantAvgRec <- read.csv(paste0(path,"/redundantAvgRecPinData.csv"),header=FALSE,row.names=1)
+    names(redundantAvgRec) <- c("Spiny_dogfish",
+                       "Winter_skate",
+                       "Atlantic_herring",
+                       "Atlantic_cod",
+                       "Haddock",
+                       "Yellowtail_flounder",
+                       "Winter_flounder",
+                       "Atlantic_mackerel",
+                       "Silver_hake",
+                       "Goosefish")
+    redundantAvgRec <- redundantAvgRec[-1,]
+    redundantAvgRec <- redundantAvgRec[,order(names(redundantAvgRec))]
+    
+  }
+  
   
   p$redundantAvgRec <- t(redundantAvgRec)
   
