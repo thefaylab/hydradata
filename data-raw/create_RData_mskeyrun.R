@@ -19,6 +19,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     survlen <- mskeyrun::simSurveyLencomp
     survagelen <- mskeyrun::simSurveyAgeLencomp
     survlensamp <- NULL
+    focalprey <- NULL
     survdiet <- mskeyrun::simSurveyDietcomp
     survdietlen <- NULL
     survtemp <- mskeyrun::simSurveyBottemp
@@ -55,6 +56,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     survindex.all <- mskeyrun::surveyIndex %>%
       dplyr::filter(YEAR %in% modyears) %>%
       dplyr::left_join(focalspp %>% dplyr::select(-NESPP3) %>% dplyr::distinct()) %>%
+      dplyr::filter(!is.na(modelName)) %>%
       dplyr::mutate(ModSim = "Actual",
                     year = YEAR,
                     Code = SPECIES_ITIS,
@@ -65,6 +67,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     survindex.AL <- mskeyrun::surveyIndexA4 %>%
       dplyr::filter(YEAR %in% modyears) %>%
       dplyr::left_join(focalspp %>% dplyr::select(-NESPP3) %>% dplyr::distinct()) %>%
+      dplyr::filter(!is.na(modelName)) %>%
       dplyr::mutate(ModSim = "Actual",
                     year = YEAR,
                     Code = SPECIES_ITIS,
@@ -75,6 +78,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     survindex.HB <- mskeyrun::surveyIndexHB %>%
       dplyr::filter(YEAR %in% modyears) %>%
       dplyr::left_join(focalspp %>% dplyr::select(-NESPP3) %>% dplyr::distinct()) %>%
+      dplyr::filter(!is.na(modelName)) %>%
       dplyr::mutate(ModSim = "Actual",
                     year = YEAR,
                     Code = SPECIES_ITIS,
@@ -200,12 +204,10 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       dplyr::select(-units) %>%
       tidyr::pivot_wider(names_from = "variable", values_from = "value") %>%
       dplyr::group_by(YEAR, Name) %>%
-      # note variable name `commerical landings` likely to change, currently using branch version
-      dplyr::mutate(catch = sum(`commerical landings`,`commercial discards`, na.rm = TRUE),
+      dplyr::mutate(catch = sum(`commercial landings`,`commercial discards`, na.rm = TRUE),
                     cv = 0.05) %>%
       dplyr::ungroup() %>%
-      # note variable name `commerical landings` likely to change, currently using branch version
-      tidyr::pivot_longer(c(`commerical landings`, `commercial discards`, catch, cv), names_to = "variable", values_to = "value") %>%
+      tidyr::pivot_longer(c(`commercial landings`, `commercial discards`, catch, cv), names_to = "variable", values_to = "value") %>%
       dplyr::mutate(units = ifelse(variable=="cv", "unitless", "metric tons")) %>%
       dplyr::left_join(fleetdef, by=c("Name" = "species")) %>%
       dplyr::mutate(ModSim = "Actual",
@@ -242,21 +244,28 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
                         fishlen)
   
   # read in data files associated with pin and dat file
-  d <- get_DatData_msk(nlenbin,
+  d <- get_DatData_msk(dattype,
+                       nlenbin,
                        focalspp,
                        bindef,
                        survindex,
                        survlen,
+                       survlensamp,
                        survagelen,
+                       focalprey,
                        survdiet,
+                       survdietlen,
                        survtemp,
                        survbiopar,
+                       fleetdef,
                        fishindex,
                        fishlen,
+                       fishlensamp,
                        percapcons,
                        path)
-  p <- get_PinData_msk(nlenbin,
-                       focalspp,
+  p <- get_PinData_msk(dattype,
+                       nlenbin,
+                       speciesList = d$speciesList,
                        bindef,
                        startpars,
                        Nyrs = d$Nyrs,
@@ -352,17 +361,23 @@ get_modbins <- function(nlenbin,
   
 }
 
-get_DatData_msk <- function(nlenbin,
+get_DatData_msk <- function(dattype,
+                            nlenbin,
                             focalspp,
                             bindef,
                             survindex,
                             survlen,
+                            survlensamp,
                             survagelen,
+                            focalprey,
                             survdiet,
+                            survdietlen,
                             survtemp,
                             survbiopar,
+                            fleetdef,
                             fishindex,
                             fishlen,
+                            fishlensamp,
                             percapcons,
                             path){
   # We stipulate all of the input data needed to write to the .dat file
@@ -531,7 +546,7 @@ get_DatData_msk <- function(nlenbin,
   
   modbins <- bindef$modbins
   
-  if(is.null(survlensamp)) {
+  if(dattype == "sim") {
     
     obsSurvSize <- survlen %>%
       dplyr::mutate(species = Name) %>%
@@ -558,7 +573,7 @@ get_DatData_msk <- function(nlenbin,
     
   }
   
-  if(!is.null(survlensamp)) {
+  if(dattype == "real") {
     
     obsSurvSize <- survlen %>%
       dplyr::mutate(species = Name) %>%
@@ -617,7 +632,7 @@ get_DatData_msk <- function(nlenbin,
   d$observedCatch <- obsCatch
   
   
-  if(is.null(fishlensamp)){
+  if(dattype == "sim"){
     
   # observed catch size composition
   obsCatchSize <- fishlen %>%
@@ -644,7 +659,7 @@ get_DatData_msk <- function(nlenbin,
   }
   
   
-  if(!is.null(fishlensamp)){
+  if(dattype == "real"){
     
     # observed catch size composition
     obsCatchSize <- fishlen %>%
@@ -652,11 +667,11 @@ get_DatData_msk <- function(nlenbin,
       dplyr::select(species, Code, year, lenbin, value) %>%
       dplyr::left_join(modbins) %>%
       dplyr::filter(modbin.min <= lenbin & lenbin < modbin.max) %>% #lenbin defined as lower
-      dplyr::group_by(species, year, sizebin) %>%
+      dplyr::group_by(species, Code, year, sizebin) %>%
       dplyr::summarise(sumlen = sum(value)) %>%
       tidyr::spread(sizebin, sumlen) %>%
       dplyr::ungroup() %>%
-      dplyr::mutate(totN = rowSums(.[,-(1:4)], na.rm = TRUE)) %>%
+      dplyr::mutate(totN = rowSums(.[,-(1:3)], na.rm = TRUE)) %>%
       dplyr::left_join(fishlensamp) %>%
       dplyr::rename(inpN = lensampsize) %>%
       dplyr::mutate(type = 0) %>%
@@ -668,6 +683,10 @@ get_DatData_msk <- function(nlenbin,
       dplyr::select(-totN, -Code, -pelagic, -demersal) %>%
       dplyr::select(fishery, area, year, species, type, inpN, everything()) %>%
       dplyr::arrange(fishery, area, species, year)
+    
+    # temporary fix
+    obsCatchSize$inpN[is.na(obsCatchSize$inpN)] <- 5
+    
     
   }
   
@@ -692,7 +711,8 @@ get_DatData_msk <- function(nlenbin,
   # for simulated diet! need different function for real diet that is by length
   # need length comp by age to get diet at length
   
-  if(!is.null(survagelen)) {
+  if(dattype == "sim") {
+    
   svagelenbin <- survagelen %>%
     dplyr::mutate(species = Name) %>%
     dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
@@ -719,7 +739,7 @@ get_DatData_msk <- function(nlenbin,
   }
   
   # need code for real diet data here
-  if(is.null(survagelen)){
+  if(dattype == "real"){
     
     lenbintots <- survdietlen %>%
       dplyr::mutate(species = Name) %>%
@@ -788,7 +808,7 @@ get_DatData_msk <- function(nlenbin,
   
   # observed temperature
   
-  if(is.null(survlensamp)) {
+  if(dattype == "sim") {
   # simulation using only fall: NOBA_BTS_fall_allbox_effic1
   obsTemp <- survtemp %>%
     dplyr::filter(survey=="BTS_fall_allbox_effic1") %>%
@@ -796,7 +816,7 @@ get_DatData_msk <- function(nlenbin,
     dplyr::select(year, meantemp=value)
   }
   
-  if(!is.null(survlensamp)) {
+  if(dattype == "real") {
     obsTemp <- survtemp %>%
       dplyr::mutate(year = as.integer(year-fitstartyr)) %>% #year starts at 1
       dplyr::select(year, meantemp=value)
@@ -808,7 +828,7 @@ get_DatData_msk <- function(nlenbin,
   # uses same length-age lookup as above to convert to length specific percapcons
   # takes mean across all years to get single vector
   
-  if(!is.null(percapcons)){
+  if(dattype == "sim"){
   stomachContent <- percapcons %>%
     dplyr::mutate(species = Name) %>%
     dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
@@ -834,7 +854,7 @@ get_DatData_msk <- function(nlenbin,
   
   }
   
-  if(is.null(percapcons)) {
+  if(dattype == "real") {
     # original hydra_sim parameterization, reorder with mskeyrun names
     stomachContent <- read.csv(paste0(path,"/intake_stomachContent.csv"),header=TRUE)
     stomachContent$species <- c("Spiny_dogfish",
@@ -959,11 +979,11 @@ get_DatData_msk <- function(nlenbin,
   d$maturityCovEffects <- as.matrix(maturity_covEffects)
   
   # growth FIX THIS TO BE ESTIMATED IN A FUNCTION HERE
-  if(is.null(survlensamp)){
+  if(dattype == "sim"){
     growth <- read.csv(paste0(path,"/growth_species_NOBA_era1_BTS_fall_allbox_effic1.csv"),header=TRUE,row.names=1)
   }
   
-  if(!is.null(survlensamp)){
+  if(dattype == "real"){
     #original hydra_sim parameters, change to mskeyrun names and order
     growth <- read.csv(paste0(path,"/growth_species.csv"),header=FALSE,row.names=1)
     names(growth) <- c("Spiny_dogfish",
@@ -1009,8 +1029,9 @@ get_DatData_msk <- function(nlenbin,
   d$M1 <- as.matrix(M1)
   
   #foodweb, object created above
-  rownames(foodweb) <- foodweb[,1]
-  foodweb[,1] <- NULL
+  foodweb <- foodweb %>% tibble::column_to_rownames("prey")
+  #rownames(foodweb) <- foodweb[,1]
+  #foodweb[,1] <- NULL
   d$foodweb <- as.matrix(foodweb)
   
   #M2 size preference
@@ -1024,7 +1045,7 @@ get_DatData_msk <- function(nlenbin,
   
   # fishery catchability indicator (q's)
   indicatorFisheryqs<- fleetdef %>%
-    dplyr::select(fleetnames)
+    dplyr::select(dplyr::all_of(fleetnames))
   d$indicatorFisheryq<- as.matrix(t(indicatorFisheryqs))
   
   
@@ -1105,8 +1126,9 @@ get_DatData_msk <- function(nlenbin,
 
 
 
-get_PinData_msk <- function(nlenbin,
-                            focalspp,
+get_PinData_msk <- function(dattype,
+                            nlenbin,
+                            speciesList = d$speciesList,
                             bindef,
                             startpars,
                             Nyrs = d$Nyrs,
@@ -1121,13 +1143,13 @@ get_PinData_msk <- function(nlenbin,
   p <- list()
   # path to data
   # list of species and guilds (Functional Groups)'
-  speciesList <- focalspp[order(unique(focalspp$Name)),]
-  Nspecies <- length(unique(focalspp$Name))
+  #speciesList <- focalspp[order(unique(focalspp$Name)),]
+  Nspecies <- length(speciesList)
   
   modbins <- bindef$modbins
   
   # starting length structure
-  if(!is.null(startpars)){
+  if(dattype == "sim"){
   Y1N <- startpars %>%
     dplyr::filter(variable=="Natlen") %>%
     dplyr::left_join(modbins, by=c("Name" = "species")) %>%
@@ -1142,7 +1164,7 @@ get_PinData_msk <- function(nlenbin,
     as.matrix()
   }
   
-  if(is.null(startpars)){
+  if(dattype == "real"){
     # try original parameterization
     Y1N <- read.csv(paste0(path,"/observation_Y1N.csv"),header=TRUE,row.names=1)
     rownames(Y1N) <- c("Spiny_dogfish",
@@ -1159,7 +1181,7 @@ get_PinData_msk <- function(nlenbin,
     Y1N <-Y1N[order(rownames(Y1N)),]
   }
   
-  rownames(Y1N) = sort.default(speciesList$Name)
+  rownames(Y1N) = sort.default(speciesList)
   
   p$Y1N <- Y1N
   
@@ -1170,14 +1192,14 @@ get_PinData_msk <- function(nlenbin,
   p$recbeta <- rep(0.0, Nspecies)
   
   # Avg recruitment and deviations
-  if(!is.null(startpars)){
+  if(dattype == "sim"){
   redundantAvgRec <- startpars %>%
     dplyr::filter(variable=="AvgRec") %>%
     dplyr::select(Name, ln_avgrec=value) %>%
     tibble::column_to_rownames("Name") 
   }
   
-  if(is.null(startpars)){
+  if(dattype == "real"){
     redundantAvgRec <- read.csv(paste0(path,"/redundantAvgRecPinData.csv"),header=FALSE,row.names=1)
     names(redundantAvgRec) <- c("Spiny_dogfish",
                        "Winter_skate",
@@ -1199,7 +1221,7 @@ get_PinData_msk <- function(nlenbin,
   
   # recdevs start at 0
   redundantRecDevs <-  matrix(0, Nspecies, Nyrs,
-                              dimnames = list(c(sort.default(speciesList$Name), NULL)))
+                              dimnames = list(c(sort.default(speciesList), NULL)))
   
   p$redundantRecDevs <- unlist(redundantRecDevs)
   
