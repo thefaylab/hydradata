@@ -684,8 +684,14 @@ get_DatData_msk <- function(dattype,
       dplyr::select(fishery, area, year, species, type, inpN, everything()) %>%
       dplyr::arrange(fishery, area, species, year)
     
+    # some catch at length has no matching sample size (multiple species)
     # temporary fix
     obsCatchSize$inpN[is.na(obsCatchSize$inpN)] <- 5
+    
+    # some sample size has no matching catch at length (winter skate)
+    # temporary fix
+    obsCatchSize <- obsCatchSize %>%
+      dplyr::filter(!dplyr::if_all(c(dplyr::contains("sizebin")), is.na))
     
     
   }
