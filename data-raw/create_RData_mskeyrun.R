@@ -590,7 +590,7 @@ get_DatData_msk <- function(dattype,
       dplyr::mutate(type = 0) %>%
       dplyr::mutate(dplyr::across(c(dplyr::contains("sizebin")), ~./totN)) %>%
       dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
-      dplyr::select(-totN) %>%
+      dplyr::select(-Code, -totN) %>%
       dplyr::select(survey, year, species, type, inpN, everything()) %>%
       dplyr::arrange(survey)
     
@@ -775,6 +775,7 @@ get_DatData_msk <- function(dattype,
       tidyr::spread(prey, dietsize) %>%
       dplyr::ungroup() %>%
       dplyr::select(-SPECIES_ITIS, -Name) %>%
+      dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
       dplyr::filter(!is.na(sizebin)) 
   }
   
