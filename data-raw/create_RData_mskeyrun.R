@@ -91,7 +91,17 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     
     # rename for functions below
     survindex$variable <- stringr::str_replace_all(survindex$variable, "strat.biomass", "biomass")
-
+    
+    # observed survey biomass
+    towarea <- 0.0384
+    
+    GBsurvstrata  <- c(1090, 1130:1210, 1230, 1250, 3460, 3480, 3490, 3520:3550)
+    
+    GBarea <- FishStatsUtils::northwest_atlantic_grid %>%
+      dplyr::filter(stratum_number %in% GBsurvstrata) %>%
+      dplyr::summarise(area = sum(Area_in_survey_km2)) %>%
+      as.double()
+    
     # get cv = stdev/bio = sqrt(variance)/bio
     survindex <- survindex %>%
       dplyr::filter(variable %in% c("biomass", "biomass.var")) %>%
@@ -99,8 +109,10 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       tidyr::pivot_wider(names_from = "variable", values_from = "value") %>%
       dplyr::mutate(cv = sqrt(biomass.var)/biomass) %>%
       dplyr::select(-biomass.var) %>%
+      # expand: area of tow =  0.0384 and GB area = above and kg to tons
+      dplyr::mutate(biomass = biomass * (GBarea/towarea) /1000) %>% 
       tidyr::pivot_longer(c(biomass, cv), names_to = "variable", values_to = "value") %>%
-      dplyr::mutate(units = ifelse(variable=="biomass", "kg tow^-1", "unitless"))
+      dplyr::mutate(units = ifelse(variable=="biomass", "tons", "unitless"))
     
     # need to add sample size for lengths from mskeyrun::surveyLenSampN
     survlen <- mskeyrun::realSurveyLennumcomp %>%
@@ -126,8 +138,6 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
                                               TRUE ~ as.character(NA)),
                     survey = paste(vessel, SEASON)) %>%
       dplyr::select(year, Code, survey, lensampsize)
-    
-    #GBsurvstrata  <- c(1090, 1130:1210, 1230, 1250, 3460, 3480, 3490, 3520:3550)
     
     focalprey <- focalspp %>%
       dplyr::select(-NESPP3) %>%
@@ -522,7 +532,6 @@ get_DatData_msk <- function(dattype,
   
   fitstartyr <- survindex$year[1]-1
   
-  # observed survey biomass
   # new long format
   obsBio <- survindex %>%
     dplyr::mutate(species = Name) %>%
