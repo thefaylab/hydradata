@@ -87,7 +87,10 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       dplyr::select(ModSim, year, Code, Name, survey, variable, value, units)
     
     # try to fit separately
-    survindex <- dplyr::bind_rows(survindex.AL, survindex.HB) 
+    #survindex <- dplyr::bind_rows(survindex.AL, survindex.HB) 
+    
+    # try to simplify
+    survindex <- survindex.all
     
     # rename for functions below
     survindex$variable <- stringr::str_replace_all(survindex$variable, "strat.biomass", "biomass")
@@ -124,7 +127,8 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       dplyr::mutate(vessel = dplyr::case_when(year<2009 ~ "Albatross",
                                               year>=2009 ~ "Bigelow", 
                                               TRUE ~ as.character(NA)),
-                    survey = paste(vessel, season)) %>%
+                    #survey = paste(vessel, season)) %>%
+                    survey = paste0("Combined ", season)) %>%
       dplyr::select(ModSim, year, Code, Name, survey, lenbin, variable, value, units)
     
     survagelen <- NULL #diet already has length in it
@@ -136,7 +140,8 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
                     vessel = dplyr::case_when(SVVESSEL == "AL" ~ "Albatross",
                                               SVVESSEL == "HB" ~ "Bigelow", 
                                               TRUE ~ as.character(NA)),
-                    survey = paste(vessel, SEASON)) %>%
+                    #survey = paste(vessel, SEASON)) %>%
+                    survey = paste0("Combined ", SEASON)) %>%
       dplyr::select(year, Code, survey, lensampsize)
     
     focalprey <- focalspp %>%
@@ -149,7 +154,8 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       dplyr::mutate(vessel = dplyr::case_when(year<2009 ~ "Albatross",
                                               year>=2009 ~ "Bigelow", 
                                               TRUE ~ as.character(NA)),
-                    survey = paste(vessel, season),
+                    #survey = paste(vessel, season),
+                    survey = paste0("Combined ", season),
                     agecl = NA) %>%
       dplyr::left_join(focalprey, by=c("prey" = "SCIENTIFIC_NAME")) %>%
       dplyr::rename(preySci = prey,
@@ -163,8 +169,9 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       dplyr::mutate(vessel = dplyr::case_when(year<2009 ~ "Albatross",
                                               year>=2009 ~ "Bigelow", 
                                               TRUE ~ as.character(NA)),
-                    survey = paste(vessel, season))
- 
+                    #survey = paste(vessel, season))
+                    survey = paste0("Combined ", season))
+    
     survtempdat <- ecodata::bottom_temp %>% 
       dplyr::filter(EPU == "GB",
                     Time %in% modyears,
