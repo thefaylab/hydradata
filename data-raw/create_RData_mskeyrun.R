@@ -1189,7 +1189,74 @@ get_PinData_msk <- function(dattype,
   
   if(dattype == "real"){
     # try original parameterization
-    Y1N <- read.csv(paste0(path,"/observation_Y1N.csv"),header=TRUE,row.names=1)
+    #Y1N <- read.csv(paste0(path,"/observation_Y1N.csv"),header=TRUE,row.names=1)
+    # this is in the paper supplement, the above must have come afterwards?
+    # initial N millions
+    Y1Npaper <- list("Spiny dogfish" = c(
+                      44.0358,
+                      39.76466,
+                      29.46116,
+                      18.65818,
+                      8.19665),
+                      "Winter skate" = c(
+                      116.86965,
+                      131.41996,
+                      118.27867,
+                      102.31659,
+                      112.13381),
+                      "Atlantic herring" = c(
+                      1229.2325,
+                      1229.2325,
+                      1307.77136,
+                      1307.77136,
+                      2724.31378),
+                      "Atlantic cod" = c(
+                      75.24274,
+                      64.75629,
+                      42.76626,
+                      50.49759,
+                      16.06118),
+                      "Haddock" = c(
+                      129.57077,
+                      320.35115,
+                      596.82624,
+                      588.06217,
+                      725.45692),
+                      "Yellowtail flounder" = c(
+                      119.02818,
+                      202.48411,
+                      227.44696,
+                      272.49665,
+                      675.00921),
+                      "Winter flounder" = c(
+                      57.89208,
+                      86.18024,
+                      94.94266,
+                      112.72898,
+                      161.48656),
+                      "Atlantic mackerel" = c(
+                      172.99207,
+                      220.51843,
+                      198.87867,
+                      177.85968,
+                      161.15555),
+                      "Silver hake" = c(
+                      135.37161,
+                      153.75246,
+                      111.32931,
+                      76.79369,
+                      101.00855),
+                      "Monkfish" = c(
+                      10.54952,
+                      10.73453,
+                      8.87141,
+                      9.40031,
+                      4.09328)
+    )
+    
+    Y1N <- as.data.frame(do.call(rbind, Y1Npaper))
+    names(Y1N) <- c("sizeclass1","sizeclass2","sizeclass3","sizeclass4","sizeclass5")
+    
     rownames(Y1N) <- c("Spiny_dogfish",
                      "Winter_skate",
                      "Atlantic_herring",
