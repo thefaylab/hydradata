@@ -1202,6 +1202,8 @@ get_PinData_msk <- function(dattype,
                      "Goosefish")
     
     Y1N <-Y1N[order(rownames(Y1N)),]
+    
+    Y1N <- log(Y1N[,] + 1e-8)
   }
   
   rownames(Y1N) = sort.default(speciesList)
