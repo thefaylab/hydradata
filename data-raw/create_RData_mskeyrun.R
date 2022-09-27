@@ -544,7 +544,8 @@ get_DatData_msk <- function(dattype,
     dplyr::mutate(species = Name) %>%
     dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
     tidyr::pivot_wider(-units, names_from = "variable", values_from = "value") %>%
-    dplyr::select(survey, year, species, biomass, cv)
+    dplyr::select(survey, year, species, biomass, cv) %>%
+    dplyr::filter(!is.na(cv)) #no 0 catch or missing cv
   
   d$Nsurvey_obs <- dim(obsBio)[1]
   obsBio$survey <- as.numeric(as.factor(obsBio$survey))
@@ -709,6 +710,9 @@ get_DatData_msk <- function(dattype,
     obsCatchSize <- obsCatchSize %>%
       dplyr::filter(!dplyr::if_all(c(dplyr::contains("sizebin")), is.na))
     
+    # there are sizebins with 0 proportions, change these to NAs
+    obsCatchSize <- obsCatchSize %>%
+      dplyr::mutate(dplyr::if_any(c(dplyr::contains("sizebin"))==0), NA)
     
   }
   
