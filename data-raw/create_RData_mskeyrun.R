@@ -1029,6 +1029,9 @@ get_DatData_msk <- function(dattype,
   d$growthK <- unlist(growth["k",])
   d$growthType <- unlist(growth["growthType",])
   
+  d$growthType[d$growthType==4] <- 3 #change to no covariates
+  d$growthType[d$growthType==2] <- 1 #change to no covariates
+  
   # dummy variables, no covariate effects in estimation model
   growth_covEffects <- data.frame(name = c(sort.default(d$speciesList)), speciesEffect1 = 0)
   rownames(growth_covEffects) <- growth_covEffects$name
