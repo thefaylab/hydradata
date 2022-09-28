@@ -710,9 +710,10 @@ get_DatData_msk <- function(dattype,
     obsCatchSize <- obsCatchSize %>%
       dplyr::filter(!dplyr::if_all(c(dplyr::contains("sizebin")), is.na))
     
-    # there are sizebins with 0 proportions, change these to NAs
+    # there are sizebins with 0 proportions
+    # temporary fix, change these to NAs
     obsCatchSize <- obsCatchSize %>%
-      dplyr::mutate(dplyr::if_any(c(dplyr::contains("sizebin"))==0), NA)
+      dplyr::mutate(dplyr::across(c(dplyr::contains("sizebin")), ~replace(., . ==  0 , NA)))
     
   }
   
