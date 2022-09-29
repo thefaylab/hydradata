@@ -46,7 +46,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
   }
 
   if(dattype == "real"){
-    modyears <- 1968:2019  #agreed for project
+    modyears <- 1978:2019  # 1968 agreed for project, testing with shorter dataset
   
     focalspp <- mskeyrun::focalSpecies %>%
       dplyr::filter(modelName != "Pollock") %>% # not using in these models
@@ -186,6 +186,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
                     units = Units) %>%
       dplyr::select(ModSim, year, survey, variable, value, units)
     
+    if(modyears[1]<1978){
     survtempfill <- data.frame(ModSim = "Actual",
                            year = setdiff(survindex$year, survtempdat$year),
                            survey = "2022ecodata::bottom_temp mean 1977-1981",
@@ -194,6 +195,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
                            units = "degreesC")
     
     survtemp <- dplyr::bind_rows(survtempfill, survtempdat)
+    }else{survtemp <- survtempdat}
     
     survbiopar <- mskeyrun::realBiolPar
 
@@ -581,9 +583,9 @@ get_DatData_msk <- function(dattype,
       dplyr::select(survey, year, species, type, inpN, everything()) %>%
       dplyr::arrange(survey)
     
-    # use -999 for missing value
+    # use 0 for missing value
     obsSurvSize <- obsSurvSize %>%
-      replace(is.na(.),-999)
+      replace(is.na(.),0)
     
     # WARNING currently hardcoded cap inpN at 1000
     obsSurvSize$inpN[obsSurvSize$inpN > 1000] <- 1000
@@ -611,9 +613,9 @@ get_DatData_msk <- function(dattype,
       dplyr::select(survey, year, species, type, inpN, everything()) %>%
       dplyr::arrange(survey)
     
-    # use -999 for missing value
+    # use 0 for missing value
     obsSurvSize <- obsSurvSize %>%
-      replace(is.na(.),-999)
+      replace(is.na(.),0)
     
   }
   
@@ -724,9 +726,9 @@ get_DatData_msk <- function(dattype,
   colorder <- c("fishery", "area", "year", "species", "type", "inpN", levels(modbins$sizebin))
   obsCatchSize <- obsCatchSize[colorder]
   
-  # use -999 for missing value
+  # use 0 for missing value
   obsCatchSize <- obsCatchSize %>%
-    replace(is.na(.),-999)
+    replace(is.na(.),0)
   
   
   d$Ncatch_size_obs <- dim(obsCatchSize)[1]
@@ -812,9 +814,9 @@ get_DatData_msk <- function(dattype,
     dplyr::mutate(inpN = 100) %>% #hardcoded simulated sample size, revisit
     dplyr::select(survey, year, species, sizebin, inpN, everything())#, -surv_alphamult_n)
   
-  # use -999 for missing value
+  # use 0 for missing value
   obsSurvDiet <- obsSurvDiet %>%
-    replace(is.na(.),-999)
+    replace(is.na(.),0)
     
   d$Ndietprop_obs <- dim(obsSurvDiet)[1]
   obsSurvDiet$survey <- as.numeric(as.factor(obsSurvDiet$survey))
