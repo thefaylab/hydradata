@@ -1055,8 +1055,8 @@ get_DatData_msk <- function(dattype,
   d$intakeAlpha <- unlist(intake["alpha",])
   d$intakeBeta <- unlist(intake["beta",])
   
-  # M1
-  M1 <- as.data.frame(matrix(0.02, d$Nspecies, d$Nsizebins, 
+  # M1, annual value to be rescaled in hydra after Nstepsyr is calculated
+  M1 <- as.data.frame(matrix(0.1, d$Nspecies, d$Nsizebins, 
                              dimnames = list(c(sort.default(d$speciesList)),  
                                              c(paste0("sizeclass",seq(1:d$Nsizebins)))))) 
   d$M1 <- as.matrix(M1)
