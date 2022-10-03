@@ -137,12 +137,12 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       dplyr::ungroup() %>%
       dplyr::mutate(year = as.integer(YEAR),
                     Code = as.character(SPECIES_ITIS),
-                    vessel = dplyr::case_when(SVVESSEL == "AL" ~ "Albatross",
-                                              SVVESSEL == "HB" ~ "Bigelow", 
+                    vessel = dplyr::case_when(year<2009 ~ "Albatross",
+                                              year>=2009 ~ "Bigelow", 
                                               TRUE ~ as.character(NA)),
                     #survey = paste(vessel, SEASON)) %>%
                     survey = paste0("Combined ", SEASON)) %>%
-      dplyr::select(year, Code, survey, lensampsize)
+      dplyr::select(year, Code, survey, lensampsize, ntows)
     
     focalprey <- focalspp %>%
       dplyr::select(-NESPP3) %>%
@@ -249,7 +249,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     fishlensamp <- mskeyrun::fisheryLenSampN %>%
       dplyr::mutate(year = as.integer(YEAR),
                     Code = as.character(SPECIES_ITIS)) %>%
-      dplyr::select(year, Code, lensampsize)
+      dplyr::select(year, Code, lensampsize, ntrips)
     
     percapcons <- NULL # read existing csv of GB stomwt 
     
@@ -605,7 +605,7 @@ get_DatData_msk <- function(dattype,
       dplyr::ungroup() %>%
       dplyr::mutate(totN = rowSums(.[,-(1:4)], na.rm = TRUE)) %>%
       dplyr::left_join(survlensamp) %>%
-      dplyr::rename(inpN = lensampsize) %>%
+      dplyr::rename(inpN = ntows) %>%
       dplyr::mutate(type = 0) %>%
       dplyr::mutate(dplyr::across(c(dplyr::contains("sizebin")), ~./totN)) %>%
       dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
@@ -692,7 +692,7 @@ get_DatData_msk <- function(dattype,
       dplyr::ungroup() %>%
       dplyr::mutate(totN = rowSums(.[,-(1:3)], na.rm = TRUE)) %>%
       dplyr::left_join(fishlensamp) %>%
-      dplyr::rename(inpN = lensampsize) %>%
+      dplyr::rename(inpN = ntrips) %>%
       dplyr::mutate(type = 0) %>%
       dplyr::left_join(fleetdef) %>%
       dplyr::rename(fishery = qind) %>%
