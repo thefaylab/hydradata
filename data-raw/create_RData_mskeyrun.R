@@ -213,7 +213,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
                                                 TRUE ~ 0),
                     qind = pelagic + demersal,
                     pelagic = pelagic/2) %>%
-      dplyr::select(species, pelagic, demersal, qind)
+      dplyr::select(species, demersal, pelagic, qind)
     
     # need to have landings + discards = catch
     fishindex <- mskeyrun::catchIndex %>%
