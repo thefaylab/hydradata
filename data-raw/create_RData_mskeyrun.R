@@ -237,7 +237,8 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       dplyr::select(ModSim, year, Code, Name, fishery, variable, value, units)
     
     fishlen <- mskeyrun::realFisheryLencomp %>% #identical column names to sim, single fishery in real data
-      dplyr::filter(year %in% modyears) %>%
+      dplyr::filter(year %in% modyears,
+                    variable == "abundance") %>%
       dplyr::mutate(Code = as.character(Code)) %>%
       dplyr::left_join(focalspp %>% dplyr::select(-NESPP3) %>% dplyr::distinct(), by=c("Name" = "LongName", "Code" = "SPECIES_ITIS")) %>%
       dplyr::mutate(Name = modelName) %>%
