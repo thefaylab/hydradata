@@ -610,7 +610,7 @@ get_DatData_msk <- function(dattype,
       dplyr::mutate(type = 0) %>%
       dplyr::mutate(dplyr::across(c(dplyr::contains("sizebin")), ~./totN)) %>%
       dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
-      dplyr::select(-Code, -totN) %>%
+      dplyr::select(-Code, -totN, -lensampsize) %>%
       dplyr::select(survey, year, species, type, inpN, everything()) %>%
       dplyr::arrange(survey)
     
@@ -1322,8 +1322,8 @@ get_PinData_msk <- function(dattype,
   
   p$redundantAvgRec <- t(redundantAvgRec)
   
-  # recdevs start at 0
-  redundantRecDevs <-  matrix(0, Nspecies, Nyrs,
+  # recdevs start at 0 and are estimated for year 2 on, so Nrys-1
+  redundantRecDevs <-  matrix(0, Nspecies, Nyrs-1,
                               dimnames = list(c(sort.default(speciesList), NULL)))
   
   p$redundantRecDevs <- unlist(redundantRecDevs)
