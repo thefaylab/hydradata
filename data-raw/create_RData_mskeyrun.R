@@ -150,7 +150,8 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       dplyr::select(SCIENTIFIC_NAME, SPECIES_ITIS, Name)
     
     survdiet <- mskeyrun::surveyDietcomp %>%
-      dplyr::filter(year %in% modyears) %>%
+      dplyr::filter(year %in% modyears,
+                    season %in% c("FALL", "SPRING")) %>%
       dplyr::mutate(vessel = dplyr::case_when(year<2009 ~ "Albatross",
                                               year>=2009 ~ "Bigelow", 
                                               TRUE ~ as.character(NA)),
@@ -165,7 +166,8 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       dplyr::mutate(value = value/100)
     
     survdietlen <- mskeyrun::surveyLenDietcomp %>%
-      dplyr::filter(year %in% modyears) %>%
+      dplyr::filter(year %in% modyears,
+                    season %in% c("FALL", "SPRING")) %>%
       dplyr::mutate(vessel = dplyr::case_when(year<2009 ~ "Albatross",
                                               year>=2009 ~ "Bigelow", 
                                               TRUE ~ as.character(NA)),
