@@ -796,9 +796,9 @@ get_DatData_msk <- function(dattype,
       dplyr::left_join(focalprey, by=c("prey" = "SCIENTIFIC_NAME")) %>%
       dplyr::mutate(prey = Name) %>%
       dplyr::filter(prey %in% unique(modbins$species)) %>% #drops prey that aren't our modeled species
+      dplyr::select(-SPECIES_ITIS, -Name) %>%
       tidyr::spread(prey, dietsize) %>%
       dplyr::ungroup() %>%
-      dplyr::select(-SPECIES_ITIS, -Name) %>%
       dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
       dplyr::filter(!is.na(sizebin)) 
   }
@@ -806,7 +806,8 @@ get_DatData_msk <- function(dattype,
   # add back any modeled species that weren't prey so they show up as columns
   missedpreds <- setdiff(unique(modbins$species), names(obsSurvDiet)[-(1:4)])
   obsSurvDiet[missedpreds] <- NA_real_
-  obsSurvDiet[,-(1:4)] <- obsSurvDiet[unique(modbins$species)]
+  dcolorder <- c("species", "survey", "year", "sizebin", (sort.default(d$speciesList)))
+  obsSurvDiet <- obsSurvDiet[dcolorder]
   
   obsSurvDiet <- obsSurvDiet %>% 
     dplyr::mutate(allotherprey = 1-rowSums(.[,-(1:4)], na.rm = TRUE)) %>%
