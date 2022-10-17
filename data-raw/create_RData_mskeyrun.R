@@ -425,6 +425,7 @@ get_DatData_msk <- function(dattype,
     tidyr::spread(species, avgpreyprop) %>%
     dplyr::mutate(prey = dplyr::case_when(is.na(prey) ~ neverprey,
                                    TRUE ~ prey)) %>%
+    dplyr::arrange(prey) %>%
     replace(is.na(.), 0)
   
   predOrPrey <- ifelse(colSums(foodweb[-1])>0, 1, 0)
