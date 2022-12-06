@@ -207,15 +207,24 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       dplyr::distinct() %>%
       dplyr::mutate(species = Name) %>%
       dplyr::arrange(species) %>%
-      dplyr::mutate(pelagic = dplyr::case_when(species %in% c("Atlantic_herring",
-                                                              "Atlantic_mackerel") ~ 2,
-                                               TRUE ~ 0),
-                    demersal = dplyr::case_when(!species %in% c("Atlantic_herring",
-                                                                "Atlantic_mackerel") ~ 1,
-                                                TRUE ~ 0),
-                    qind = pelagic + demersal,
-                    pelagic = pelagic/2) %>%
-      dplyr::select(species, demersal, pelagic, qind)
+      # #2 fleet config used for WGSAM model fitting fall 2022
+      # dplyr::mutate(pelagic = dplyr::case_when(species %in% c("Atlantic_herring",
+      #                                                         "Atlantic_mackerel") ~ 2,
+      #                                          TRUE ~ 0),
+      #               demersal = dplyr::case_when(!species %in% c("Atlantic_herring",
+      #                                                           "Atlantic_mackerel") ~ 1,
+      #                                           TRUE ~ 0),
+      #               qind = pelagic + demersal,
+      #               pelagic = pelagic/2) %>%
+      # dplyr::select(species, demersal, pelagic, qind)
+      #
+      # #species = fleet config suggested at WGSAM Dec 2022
+      dplyr::mutate(fleetnames = Name,
+                    value = 1,
+                    qind = which(Name==Name)) %>%
+      dplyr::select(species, fleetnames, value, qind) %>%
+      tidyr::pivot_wider(names_from = fleetnames, values_from = value, values_fill = 0)
+      
     
     # need to have landings + discards = catch
     fishindex <- mskeyrun::catchIndex %>%
@@ -238,7 +247,8 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
                     fishery = qind) %>%
       dplyr::select(ModSim, year, Code, Name, fishery, variable, value, units)
     
-    fishlen <- mskeyrun::realFisheryLencomp %>% #identical column names to sim, single fishery in real data
+    #fishlen <- mskeyrun::realFisheryLencomp %>% #identical column names to sim, single fishery in real data
+    fishlen <- mskeyrun::realFisheryLencompRaw %>% #this dataset does not borrow lengths  
       dplyr::filter(year %in% modyears,
                     variable == "abundance") %>%
       dplyr::mutate(Code = as.character(Code)) %>%
@@ -456,7 +466,7 @@ get_DatData_msk <- function(dattype,
   d$Nspecies <- length(unique(focalspp$Name))
   d$Nsizebins <- nlenbin
   d$Nareas <- 1
-  d$Nfleets <- 2
+  d$Nfleets <- length(unique(fishindex$fishery)) 
   d$Nsurveys <- length(unique(survindex$survey))
   d$wtconv <- 1
   d$yr1Nphase <- 1
@@ -698,12 +708,12 @@ get_DatData_msk <- function(dattype,
       dplyr::left_join(fishlensamp) %>%
       dplyr::rename(inpN = ntrips) %>%
       dplyr::mutate(type = 0) %>%
-      dplyr::left_join(fleetdef) %>%
+      dplyr::left_join(fleetdef %>% dplyr::select(species, qind)) %>%
       dplyr::rename(fishery = qind) %>%
       dplyr::mutate(area = 1) %>%
       dplyr::mutate(dplyr::across(c(dplyr::contains("sizebin")), ~./totN)) %>%
       dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
-      dplyr::select(-totN, -Code, -pelagic, -demersal) %>%
+      dplyr::select(-totN, -Code) %>%
       dplyr::select(fishery, area, year, species, type, inpN, everything()) %>%
       dplyr::arrange(fishery, area, species, year)
     
@@ -829,17 +839,18 @@ get_DatData_msk <- function(dattype,
   obsSurvDiet$sizebin <- as.numeric(regmatches(obsSurvDiet$sizebin, regexpr("\\d+", obsSurvDiet$sizebin)))#take the number portion of sizebinN
   d$observedSurvDiet <- obsSurvDiet
   
-  # observed effort by fleet (dummy, not used in estimation model)
-  # also hardcoded for current 2 fleets
+  # observed effort by fleet (dummy, not used in estimation model) but fleenames used
+  # also hardcoded for current 2 fleets--fixed dec 2022
   #fleetnames <- c("allbutcod", "codfleet")
-  fleetnames <- names(fleetdef)[2:3]
+  
+  fleetnames <- names(fleetdef)[!names(fleetdef) %in% c("species", "qind")]
   
   obsEffort <- data.frame(1:d$Nyrs,
                           matrix(1, d$Nyrs, d$Nfleets))
   names(obsEffort) <- c("year", fleetnames)
     
   d$observedEffort <- t(obsEffort)
-  d$fleetNames <- (names(obsEffort)[2:(d$Nfleets+1)])
+  d$fleetNames <- fleetnames #(names(obsEffort)[2:(d$Nfleets+1)])
   
   # observed temperature
   
