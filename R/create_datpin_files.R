@@ -438,8 +438,9 @@ write_DatFile <- function(dataList,listOfParameters) {
   cat(c(" ",dataList$intakeBeta),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
 
   # M1 - natural mortality (not explained by model)
-  cat(" # M1 - natural mortality (not explained by model)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("#  init_3darray M1(1,Nareas,1,Nspecies,1,Nsizebins)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # Dec 2022 moved to pin for estimation
+  # cat(" # M1 - natural mortality (not explained by model)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # cat("#  init_3darray M1(1,Nareas,1,Nspecies,1,Nsizebins)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
 
   for (isp in 1:dataList$Nspecies) {
     cat(c(" ",dataList$M1[isp,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
@@ -872,5 +873,17 @@ write_estPinFile <- function(dataList,listOfParameters){
   for (spar in 1:2) {
     cat(c(" ",dataList$survsel_pars[spar,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   }
+  
+  # M1
+  cat("# M1: ln_M1ann(1,Nareas,1,Nspecies)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$ln_M1ann),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
+  # ln_otherFood base
+  cat("# ln_otherFood base",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$ln_otherFood),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
+  # other food devs
+  cat("# other food devs: otherFood_dev(1,Npred-1)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$otherFood_dev),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   
 }

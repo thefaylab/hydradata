@@ -304,6 +304,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
                        Nfleets = d$Nfleets,
                        Nsurveys = d$Nsurveys,
                        Nareas = d$Nareas,
+                       Npreds = sum(d$predOrPrey),
                        fqind = d$indicatorFisheryq,
                        observedCatch = d$observedCatch,
                        observedBiomass = d$observedBiomass,
@@ -1075,10 +1076,11 @@ get_DatData_msk <- function(dattype,
   d$intakeBeta <- unlist(intake["beta",])
   
   # M1, annual value to be rescaled in hydra after Nstepsyr is calculated
-  M1 <- as.data.frame(matrix(0.1, d$Nspecies, d$Nsizebins, 
-                             dimnames = list(c(sort.default(d$speciesList)),  
-                                             c(paste0("sizeclass",seq(1:d$Nsizebins)))))) 
-  d$M1 <- as.matrix(M1)
+  # Dec 2022 moved to pin and reformatted for estimation
+  # M1 <- as.data.frame(matrix(0.1, d$Nspecies, d$Nsizebins, 
+  #                            dimnames = list(c(sort.default(d$speciesList)),  
+  #                                            c(paste0("sizeclass",seq(1:d$Nsizebins)))))) 
+  # d$M1 <- as.matrix(M1)
   
   #foodweb, object created above
   foodweb <- foodweb %>% tibble::column_to_rownames("prey")
@@ -1187,6 +1189,7 @@ get_PinData_msk <- function(dattype,
                             Nfleets = d$Nfleets,
                             Nsurveys = d$Nsurveys,
                             Nareas = d$Nareas,
+                            Npreds = sum(d$predOrPrey),
                             fqind = d$indicatorFisheryq,
                             observedCatch = d$observedCatch,
                             observedBiomass = d$observedBiomass,
@@ -1407,6 +1410,15 @@ get_PinData_msk <- function(dattype,
   
   p$survsel_pars <- matrix(c(survsel_c,survsel_d), ncol = Nsurveys, byrow = TRUE)
   
+  # M1 init_matrix ln_M1ann(1,Nareas,1,Nspecies,m1_phase)
+  M1ann <- rep(0.1, Nspecies)
+  p$ln_M1ann <- log(M1ann)
+  
+  # ln_otherFood base // amount of other food included in the M2 term for the base (predator 1)
+  p$ln_otherFood <- 21
+  
+  # other food devs //deviation from base other food for predators 2+  (same other food for all size classes of each predator)
+  p$otherFood_dev <- rep(0, Npreds-1)
   
   # fishery and survey sigmas not used in estimation
   # survey q and obs error
