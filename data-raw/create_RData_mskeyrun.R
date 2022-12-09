@@ -482,6 +482,9 @@ get_DatData_msk <- function(dattype,
   d$ssphase <- 1
   d$ssigPhase <- -1
   d$csigPhase <- -1
+  d$m1phase <-  -1
+  d$oF1phase <- -1
+  d$oFdevphase <- -1
   d$phimax <- 1
   d$scaleInitialN <- 1
   d$otherFood <- 1e+09

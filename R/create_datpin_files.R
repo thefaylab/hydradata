@@ -303,7 +303,13 @@ write_DatFile <- function(dataList,listOfParameters) {
   cat(c(" ",dataList$ssigPhase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("#  init_int csig_phase           //catch sigma (obs error) phase",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat(c(" ",dataList$csigPhase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-
+  cat("#  init_int m1_phase            // M1 phase",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$m1phase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("#  init_int oF1_phase           // amount of other food included in the M2 term for the base (predator 1) phase",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$oF1phase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("#   init_int oFdev_phase          //deviation from base other food for predators 2+ phase",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$oFdevphase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
   # stock recruitment parameters
   cat("#  init_matrix recGamma_alpha(1,Nareas,1,Nspecies)			//eggprod gamma Ricker model alpha",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat(c(" ",dataList$alphaEggRicker),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
