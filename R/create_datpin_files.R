@@ -437,14 +437,14 @@ write_DatFile <- function(dataList,listOfParameters) {
   cat("#  init_matrix intake_beta(1,Nareas,1,Nspecies)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat(c(" ",dataList$intakeBeta),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
 
-  # M1 - natural mortality (not explained by model)
+  # M1 - natural mortality (not explained by model) MOVED TO PIN
   # Dec 2022 moved to pin for estimation
   # cat(" # M1 - natural mortality (not explained by model)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   # cat("#  init_3darray M1(1,Nareas,1,Nspecies,1,Nsizebins)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-
-  for (isp in 1:dataList$Nspecies) {
-    cat(c(" ",dataList$M1[isp,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  }
+  # 
+  #   for (isp in 1:dataList$Nspecies) {
+  #     cat(c(" ",dataList$M1[isp,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  #   }
 
   # foodweb
   cat("#  init_3darray isprey(1,Nareas,1,Nspecies,1,Nspecies)     //preds in columns, prey in rows",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
