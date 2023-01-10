@@ -420,12 +420,19 @@ get_DatData_msk <- function(dattype,
   # path to data
   #path <- paste0(getwd(),"/",options$pathToDataFiles)
   
+  dietyrs <- survdiet %>% dplyr::summarise(count = dplyr::n_distinct(year))
+  
   predPrey <- survdiet %>%
     dplyr::mutate(species = Name) %>%
     dplyr::filter(prey %in% unique(species)) %>%
     dplyr::select(species, agecl, year, prey, value) %>%
     dplyr::group_by(species, prey) %>%
-    dplyr::summarise(avgpreyprop = mean(value, na.rm=T)) 
+    dplyr::summarise(yrct = dplyr::n_distinct(year),
+                     avgpreyprop = mean(value, na.rm=T)) %>%
+    dplyr::group_by(species) %>%
+    dplyr::mutate(maxyrct =  max(yrct)) %>%
+    dplyr::filter(maxyrct > 0.3 * dietyrs$count) # drops preds with isolated obs 
+                           #0.15 keeps haddock 0.2 keeps mackerel
   
   neverprey <- setdiff(predPrey$species, predPrey$prey)
   
@@ -831,7 +838,8 @@ get_DatData_msk <- function(dattype,
     #dplyr::left_join(svalphamultlook) %>% #what is effective sample size for Dirichlet?
     #dplyr::mutate(inpN = max(surv_alphamult_n/100000, 5)) %>% #rescale this input for now
     dplyr::mutate(inpN = 100) %>% #hardcoded simulated sample size, revisit
-    dplyr::select(survey, year, species, sizebin, inpN, everything())#, -surv_alphamult_n)
+    dplyr::select(survey, year, species, sizebin, inpN, everything()) %>% #, -surv_alphamult_n)
+    dplyr::filter(species %in% names(predOrPrey)[predOrPrey==1]) #include only kept predators
   
   # use 0 for missing value
   obsSurvDiet <- obsSurvDiet %>%
