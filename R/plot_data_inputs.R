@@ -60,22 +60,27 @@ plot_Discards_Survival <- function(outPath,inputData){
 
 plot_observed_Biomass_Catch <- function(outPath,inputData){
   #biomass <- read.table(paste0(inPath,"observation_biomass.csv"),sep=",",header=TRUE)
-  biomass <- t(inputData$observedBiomass)
-  #catch <- read.table(paste0(inPath,"observation_catch.csv"),sep=",",header=TRUE)
-  catch <- t(inputData$observedCatch)
-  nCols <- dim(biomass)[2]
-  png(paste0(outPath,"/Hydra_Biomass.png"),width=11.5,height=8,units="in",res=300)
-  par(oma=c(1,4,1,2))
-  matplot(biomass[,"year"],biomass[,c(2:nCols)], type="l",xlab="Year",ylab = "",main="Observed Biomass")
-  legend("topright",legend=colnames(biomass)[2:nCols],col=seq_len(nCols-1),lty=seq_len(nCols-1))
-  graphics.off()
-
-  png(paste0(outPath,"/Hydra_Catch.png"),width=11.5,height=8,units="in",res=300)
-  par(oma=c(1,4,1,2))
-  matplot(catch[,"year"],catch[,c(2:nCols)], type="l",xlab="Year",ylab = "",main="Observed Catch")
-  legend("topright",legend=colnames(catch)[2:nCols],col=seq_len(nCols-1),lty=seq_len(nCols-1))
-  graphics.off()
-
+  if(rownames(inputData$observedBiomass)[1]=="year"){ #original format
+    biomass <- t(inputData$observedBiomass)
+    #catch <- read.table(paste0(inPath,"observation_catch.csv"),sep=",",header=TRUE)
+    catch <- t(inputData$observedCatch)
+    nCols <- dim(biomass)[2]
+    png(paste0(outPath,"/Hydra_Biomass.png"),width=11.5,height=8,units="in",res=300)
+    par(oma=c(1,4,1,2))
+    matplot(biomass[,"year"],biomass[,c(2:nCols)], type="l",xlab="Year",ylab = "",main="Observed Biomass")
+    legend("topright",legend=colnames(biomass)[2:nCols],col=seq_len(nCols-1),lty=seq_len(nCols-1))
+    graphics.off()
+    
+    png(paste0(outPath,"/Hydra_Catch.png"),width=11.5,height=8,units="in",res=300)
+    par(oma=c(1,4,1,2))
+    matplot(catch[,"year"],catch[,c(2:nCols)], type="l",xlab="Year",ylab = "",main="Observed Catch")
+    legend("topright",legend=colnames(catch)[2:nCols],col=seq_len(nCols-1),lty=seq_len(nCols-1))
+    graphics.off()
+  }
+  
+  if(names(inputData$observedBiomass)[1]=="survey"){ # est format
+    biomass <- inputData$observedBiomass 
+  }
  # png(paste0(outPath,"/Hydra_biomass.png"),width=11.5,height=8,units="in",res=300)
 
 }
@@ -362,7 +367,8 @@ plot_Temperature <- function(outPath,inputData) {
   temperature <- inputData$observedTemperature #read.table(paste0(inPath,"observation_temperature.csv"),sep=",",header=TRUE)
   png(paste0(outPath,"/Hydra_Temperature.png"),width=11.5,height=8,units="in",res=300)
   par(oma=c(1,4,1,2))
-  plot(temperature["year",],temperature["temperature",], type="b",xlab="Year",ylab = "Temperature ('C)")
+  #plot(temperature["year",],temperature["temperature",], type="b",xlab="Year",ylab = "Temperature ('C)")
+  plot(temperature["year",],temperature[2,], type="b",xlab="Year",ylab = "Temperature ('C)")
   graphics.off()
 }
 
@@ -457,7 +463,7 @@ plot_Y1N_Biomass_lengthweight_bins <- function(outPath,inputData) {
       points(cumSumBinWidths[isp,],rep(isp,nBins+1))
     }
   }
-  axis(side=2, at=c(1:10),labels=speciesNames,las=1)
+  axis(side=2, at=c(1:nSpecies),labels=speciesNames,las=1)
   axis(side=1, at=seq(0,140,20),labels=seq(0,140,20))
   graphics.off()
 

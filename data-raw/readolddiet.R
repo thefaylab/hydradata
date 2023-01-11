@@ -31,6 +31,6 @@ predpreyorig <- dietdat %>%
                                                      "*Otherfood*")))
   
   
-flextable::flextable(predpreyorig)
+flextable::flextable(predpreyorig) %>% flextable::autofit()
 
 
