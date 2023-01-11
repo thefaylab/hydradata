@@ -7,7 +7,9 @@ library(mskeyrun)
 quantsurv <- realSurveyLennumcomp %>%
   filter(variable == "numbers") %>%
   group_by(Name) %>%
-  summarise(lenqant = quantile(lenbin, weights=value, 
+  summarise(minlens = min(lenbin, na.rm = TRUE),
+            maxlens = max(lenbin, na.rm = TRUE),
+            lenqant = quantile(lenbin, weights=value, 
                           c(0.05, 0.10, 0.5, 0.90, 0.95)), 
             quant = c(0.05, 0.10, 0.5, 0.90, 0.95)) %>%
   tidyr::pivot_wider(names_from = quant, names_prefix = "q",values_from = lenqant)
@@ -17,29 +19,41 @@ plotsurvlen <- realSurveyLennumcomp %>%
   left_join(quantsurv) %>%
   ggplot(aes(x=lenbin, y=value)) +
   geom_bar(stat = "identity", width = 1) +
-  facet_wrap(~Name, scales = "free") #+ 
-  # geom_vline(data=filter(quantsurv, Name=="Atlantic cod"),
-  #            xintercept = c("q0.05", "q0.95")) +
-  # geom_vline(data=filter(quantsurv, Name=="Atlantic herring"),
-  #            xintercept = c("q0.05", "q0.95")) +
-  # geom_vline(data=filter(quantsurv, Name=="Atlantic mackerel"),
-  #            xintercept = c("q0.05", "q0.95"))
+  facet_wrap(~Name, scales = "free") +
+  #sapply(quantsurv$q0.1, function(xint) geom_vline(aes(xintercept = xint))) 
+  
+  geom_vline(data=filter(quantsurv, Name=="Atlantic cod"),
+             aes(xintercept = q0.1)) +
+  geom_vline(data=filter(quantsurv, Name=="Atlantic herring"),
+             aes(xintercept = q0.1)) +
+  geom_vline(data=filter(quantsurv, Name=="Atlantic mackerel"),
+             aes(xintercept = q0.1)) 
 
 
 quantfish <- realFisheryLencompRaw %>%
   filter(variable == "abundance",
          !is.na(value)) %>%
   group_by(Name) %>%
-  summarise(lenqant = quantile(lenbin, weights=value, 
+  summarise(minlenf = min(lenbin, na.rm = TRUE),
+            maxlenf = max(lenbin, na.rm = TRUE),
+            lenqant = quantile(lenbin, weights=value, 
                                c(0.05, 0.10, 0.5, 0.90, 0.95)), 
             quant = c(0.05, 0.10, 0.5, 0.90, 0.95)) %>%
   tidyr::pivot_wider(names_from = quant, names_prefix = "q",values_from = lenqant)
 
-fishlen <- ggplot(realFisheryLencompRaw %>% filter(variable == "abundance"),
-                  aes(x=lenbin, y=value)) +
+plotfishlen <- realFisheryLencompRaw %>% 
+  filter(variable == "abundance") %>%
+  left_join(quantfish) %>%
+  ggplot(aes(x=lenbin, y=value)) +
   geom_bar(stat = "identity", width = 1) +
   #sapply(quantfish, function(lenquant) geom_vline(aes(xintercept = lenquant))) +
-  facet_wrap(~Name, scales = "free")
+  facet_wrap(~Name, scales = "free") +
+  geom_vline(data=filter(quantsurv, Name=="Atlantic cod"),
+           aes(xintercept = q0.1)) +
+  geom_vline(data=filter(quantsurv, Name=="Atlantic herring"),
+             aes(xintercept = q0.1)) +
+  geom_vline(data=filter(quantsurv, Name=="Atlantic mackerel"),
+             aes(xintercept = q0.1)) 
 
 
 survlen <- ggplot(realSurveyLennumcomp %>% filter(variable == "numbers"),
@@ -55,8 +69,12 @@ survlen <- ggplot(realSurveyLennumcomp %>% filter(variable == "numbers"),
 Nsizebins <- 5
 
 mixquant <- quantsurv %>%
-  select(Name, q0.1) %>%
-  left_join(quantfish %>% select(Name, q0.9)) %>%
+  select(Name, q0.1, maxlens) %>%
+  left_join(quantfish %>% select(Name, q0.9, maxlenf)) %>%
   mutate(range = q0.9 - q0.1,
          binwidth = ceiling(range/Nsizebins),
-         binwidth1 = ceiling(q0.1 + binwidth))
+         binwidth1 = ceiling(q0.1 + binwidth),
+         binwidthN = ceiling(binwidth + max(maxlens, maxlenf) - q0.9),
+         check = binwidth1 + binwidth * (Nsizebins - 2) + binwidthN)
+
+binwidth
