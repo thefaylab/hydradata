@@ -345,33 +345,53 @@ get_modbins <- function(nlenbin,
   Nsizebins <- nlenbin
   Nspecies <- length(unique(focalspp$Name))
   
-  minmaxsurv <- survlen %>%
+  quantsurv <- survlen %>%
     dplyr::group_by(Name) %>%
-    dplyr::summarise(minlen = min(lenbin, na.rm = TRUE),
-                     maxlen = max(lenbin, na.rm = TRUE),
-                     range = maxlen-minlen) 
-  minmaxfish <- fishlen %>%
-    dplyr::group_by(Name) %>%
-    dplyr::summarise(minlen = min(lenbin, na.rm = TRUE),
-                     maxlen = max(lenbin, na.rm = TRUE),
-                     range = maxlen-minlen) 
+    dplyr:summarise(minlen = min(lenbin, na.rm = TRUE),
+                        maxlen = max(lenbin, na.rm = TRUE),
+                        lenquant = quantile(lenbin, weights=value, 
+                                           c(0.05, 0.10, 0.5, 0.90, 0.95)), 
+                        quant = c(0.05, 0.10, 0.5, 0.90, 0.95)) %>%
+    tidyr::pivot_wider(names_from = quant, names_prefix = "q",values_from = lenquant)
   
-  maxLrange <- dplyr::bind_rows(minmaxsurv, minmaxfish) %>%
+  quantfish <- fishlen %>%
     dplyr::group_by(Name) %>%
-    dplyr::summarise(minminL = min(minlen),
+    dplyr::summarise(minlen = min(lenbin, na.rm = TRUE),
+                       maxlen = max(lenbin, na.rm = TRUE),
+                       lenquant = quantile(lenbin, weights=value, 
+                                          c(0.05, 0.10, 0.5, 0.90, 0.95)), 
+                       quant = c(0.05, 0.10, 0.5, 0.90, 0.95)) %>%
+    tidyr::pivot_wider(names_from = quant, names_prefix = "q",values_from = lenquant)
+  
+  # January 2023 changes
+  # use min q.0.10 for lower limit, max q.0.90 for upper limit
+  # in GB data this turns out to be survey 10% and fishery 90% quantiles
+  # divide that range into 5 equal bins, allow bin 1 to start at 0, bin 5 to extend to max
+  # so binwidths object still starts at 0 and goes to max, bin 1 and last different widths
+  
+  maxLrange <- dplyr::bind_rows(quantsurv, quantfish) %>%
+    dplyr::group_by(Name) %>%
+    dplyr::summarise(minqlo = min(q0.1),
+                     maxqhi = max(q0.9),
                      maxmaxL = max(maxlen))
-  
-  equalbinwidths <- function(Lmax, Nsizebins){
-    bindef <- max(1,ceiling(Lmax/Nsizebins))
-    binwidths <- rep(bindef, Nsizebins)
+  quantbinwidths <- function(qlo, qhi, Lmax, Nsizebins){
+    range  <- qhi-qlo
+    bindef <- max(1,ceiling(range/Nsizebins))
+    binwidths <- c(ceiling(qlo + bindef),
+                   rep(bindef, Nsizebins-2),
+                   ceiling(bindef + Lmax-qhi))
     return(binwidths)
   }
   
   newbins <- maxLrange %>%
     dplyr::group_by(Name) %>%
-    dplyr::group_modify(~broom::tidy(equalbinwidths(.$maxmaxL, Nsizebins))) %>%
+    dplyr::group_modify(~broom::tidy(quantbinwidths(.$minqlo,
+                                                    .$maxqhi,
+                                                    .$maxmaxL, 
+                                                    Nsizebins))) %>%
     dplyr::mutate(lb = paste0("sizebin",seq(1:Nsizebins))) %>%
     tidyr::pivot_wider(names_from = lb, values_from = x)
+  
   
   binwidth <- as.data.frame(newbins) %>%
     dplyr::select(-Name, everything()) %>%
