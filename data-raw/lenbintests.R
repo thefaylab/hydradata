@@ -50,6 +50,7 @@ survlen <- ggplot(realSurveyLennumcomp %>% filter(variable == "numbers"),
 
 # use q.0.10 survey for lower limit, q.0.90 fishery for upper limit
 # divide that range into 5 equal bins, allow bin 1 to start at 0, bin 5 to extend to max
+# so binwidths object still starts at 0 and goes to max, bin 1 and last different widths
 
 Nsizebins <- 5
 
@@ -57,4 +58,5 @@ mixquant <- quantsurv %>%
   select(Name, q0.1) %>%
   left_join(quantfish %>% select(Name, q0.9)) %>%
   mutate(range = q0.9 - q0.1,
-         binwid = ceiling(range/Nsizebins))
+         binwidth = ceiling(range/Nsizebins),
+         binwidth1 = ceiling(q0.1 + binwidth))
