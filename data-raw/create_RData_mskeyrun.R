@@ -347,7 +347,7 @@ get_modbins <- function(nlenbin,
   
   quantsurv <- survlen %>%
     dplyr::group_by(Name) %>%
-    dplyr:summarise(minlen = min(lenbin, na.rm = TRUE),
+    dplyr::summarise(minlen = min(lenbin, na.rm = TRUE),
                         maxlen = max(lenbin, na.rm = TRUE),
                         lenquant = quantile(lenbin, weights=value, 
                                            c(0.05, 0.10, 0.5, 0.90, 0.95)), 
