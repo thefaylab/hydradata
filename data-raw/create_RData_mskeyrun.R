@@ -356,6 +356,7 @@ get_modbins <- function(nlenbin,
   
   quantfish <- fishlen %>%
     dplyr::group_by(Name) %>%
+    dplyr::filter(!is.na(lenbin)) %>%
     dplyr::summarise(minlen = min(lenbin, na.rm = TRUE),
                        maxlen = max(lenbin, na.rm = TRUE),
                        lenquant = quantile(lenbin, weights=value, 
