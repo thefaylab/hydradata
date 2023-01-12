@@ -1,7 +1,7 @@
 # Reads data inputs from mskeyrun data package
 # does *not* make interim csv files
 
-# this one for 4 species model, cod, dogfish, mackerel, herring
+# this one for 4 GB species selftest, updated Jan for same format as full model
 
 # switch for simulated or real data
 # user specifies n bins, n fleets?
@@ -56,6 +56,7 @@ create_RData_selftest <- function(dattype = c("sim", "real"),
                                      "Atlantic_herring", 
                                      "Atlantic_mackerel", 
                                      "Spiny_dogfish")) %>%
+      
       dplyr::mutate(Name = modelName) 
     
     # single index, use if fitting to two not working
@@ -129,7 +130,6 @@ create_RData_selftest <- function(dattype = c("sim", "real"),
                     variable == "numbers") %>%
       dplyr::mutate(Code = as.character(Code)) %>%
       dplyr::left_join(focalspp %>% dplyr::select(-NESPP3) %>% dplyr::distinct(), by=c("Name" = "LongName", "Code" = "SPECIES_ITIS")) %>%
-      dplyr::filter(!is.na(modelName)) %>%
       dplyr::mutate(Name = modelName) %>%
       dplyr::mutate(vessel = dplyr::case_when(year<2009 ~ "Albatross",
                                               year>=2009 ~ "Bigelow", 
@@ -158,8 +158,8 @@ create_RData_selftest <- function(dattype = c("sim", "real"),
     
     survdiet <- mskeyrun::surveyDietcomp %>%
       dplyr::filter(year %in% modyears,
-                    season %in% c("FALL", "SPRING"),
-                    Name %in% focalspp$Name) %>%
+                    Name %in% focalspp$Name,
+                    season %in% c("FALL", "SPRING")) %>%
       dplyr::mutate(vessel = dplyr::case_when(year<2009 ~ "Albatross",
                                               year>=2009 ~ "Bigelow", 
                                               TRUE ~ as.character(NA)),
@@ -175,8 +175,8 @@ create_RData_selftest <- function(dattype = c("sim", "real"),
     
     survdietlen <- mskeyrun::surveyLenDietcomp %>%
       dplyr::filter(year %in% modyears,
-                    season %in% c("FALL", "SPRING"),
-                    Name %in% focalspp$Name) %>%
+                    Name %in% focalspp$Name,
+                    season %in% c("FALL", "SPRING")) %>%
       dplyr::mutate(vessel = dplyr::case_when(year<2009 ~ "Albatross",
                                               year>=2009 ~ "Bigelow", 
                                               TRUE ~ as.character(NA)),
@@ -216,15 +216,24 @@ create_RData_selftest <- function(dattype = c("sim", "real"),
       dplyr::distinct() %>%
       dplyr::mutate(species = Name) %>%
       dplyr::arrange(species) %>%
-      dplyr::mutate(pelagic = dplyr::case_when(species %in% c("Atlantic_herring",
-                                                              "Atlantic_mackerel") ~ 2,
-                                               TRUE ~ 0),
-                    demersal = dplyr::case_when(!species %in% c("Atlantic_herring",
-                                                                "Atlantic_mackerel") ~ 1,
-                                                TRUE ~ 0),
-                    qind = pelagic + demersal,
-                    pelagic = pelagic/2) %>%
-      dplyr::select(species, demersal, pelagic, qind)
+      # #2 fleet config used for WGSAM model fitting fall 2022
+      # dplyr::mutate(pelagic = dplyr::case_when(species %in% c("Atlantic_herring",
+      #                                                         "Atlantic_mackerel") ~ 2,
+      #                                          TRUE ~ 0),
+      #               demersal = dplyr::case_when(!species %in% c("Atlantic_herring",
+      #                                                           "Atlantic_mackerel") ~ 1,
+      #                                           TRUE ~ 0),
+      #               qind = pelagic + demersal,
+      #               pelagic = pelagic/2) %>%
+      # dplyr::select(species, demersal, pelagic, qind)
+      #
+      # #species = fleet config suggested at WGSAM Dec 2022
+      dplyr::mutate(fleetnames = Name,
+                    value = 1,
+                    qind = which(Name==Name)) %>%
+      dplyr::select(species, fleetnames, value, qind) %>%
+      tidyr::pivot_wider(names_from = fleetnames, values_from = value, values_fill = 0)
+      
     
     # need to have landings + discards = catch
     fishindex <- mskeyrun::catchIndex %>%
@@ -247,12 +256,12 @@ create_RData_selftest <- function(dattype = c("sim", "real"),
                     fishery = qind) %>%
       dplyr::select(ModSim, year, Code, Name, fishery, variable, value, units)
     
-    fishlen <- mskeyrun::realFisheryLencomp %>% #identical column names to sim, single fishery in real data
+    #fishlen <- mskeyrun::realFisheryLencomp %>% #identical column names to sim, single fishery in real data
+    fishlen <- mskeyrun::realFisheryLencompRaw %>% #this dataset does not borrow lengths  
       dplyr::filter(year %in% modyears,
                     variable == "abundance") %>%
       dplyr::mutate(Code = as.character(Code)) %>%
       dplyr::left_join(focalspp %>% dplyr::select(-NESPP3) %>% dplyr::distinct(), by=c("Name" = "LongName", "Code" = "SPECIES_ITIS")) %>%
-      dplyr::filter(!is.na(modelName)) %>%
       dplyr::mutate(Name = modelName) %>%
       dplyr::left_join(fleetdef, by=c("Name" = "species")) %>%
       dplyr::mutate(fishery = qind) %>%
@@ -304,6 +313,7 @@ create_RData_selftest <- function(dattype = c("sim", "real"),
                        Nfleets = d$Nfleets,
                        Nsurveys = d$Nsurveys,
                        Nareas = d$Nareas,
+                       Npreds = sum(d$predOrPrey),
                        fqind = d$indicatorFisheryq,
                        observedCatch = d$observedCatch,
                        observedBiomass = d$observedBiomass,
@@ -344,33 +354,56 @@ get_modbins <- function(nlenbin,
   Nsizebins <- nlenbin
   Nspecies <- length(unique(focalspp$Name))
   
-  minmaxsurv <- survlen %>%
+  quantsurv <- survlen %>%
     dplyr::group_by(Name) %>%
     dplyr::summarise(minlen = min(lenbin, na.rm = TRUE),
-                     maxlen = max(lenbin, na.rm = TRUE),
-                     range = maxlen-minlen) 
-  minmaxfish <- fishlen %>%
+                        maxlen = max(lenbin, na.rm = TRUE),
+                        lenquant = quantile(lenbin, weights=value, 
+                                           c(0.05, 0.10, 0.5, 0.90, 0.95)), 
+                        quant = c(0.05, 0.10, 0.5, 0.90, 0.95)) %>%
+    tidyr::pivot_wider(names_from = quant, names_prefix = "q",values_from = lenquant)
+  
+  quantfish <- fishlen %>%
     dplyr::group_by(Name) %>%
+    dplyr::filter(!is.na(lenbin)) %>%
     dplyr::summarise(minlen = min(lenbin, na.rm = TRUE),
-                     maxlen = max(lenbin, na.rm = TRUE),
-                     range = maxlen-minlen) 
+                       maxlen = max(lenbin, na.rm = TRUE),
+                       lenquant = quantile(lenbin, weights=value, 
+                                          c(0.05, 0.10, 0.5, 0.90, 0.95)), 
+                       quant = c(0.05, 0.10, 0.5, 0.90, 0.95)) %>%
+    tidyr::pivot_wider(names_from = quant, names_prefix = "q",values_from = lenquant)
   
-  maxLrange <- dplyr::bind_rows(minmaxsurv, minmaxfish) %>%
+  # January 2023 changes
+  # use min q.0.10 for lower limit, max q.0.90 for upper limit
+  # in GB data this turns out to be survey 10% and fishery 90% quantiles
+  # divide that range into 5 equal bins, allow bin 1 to start at 0, bin 5 to extend to max
+  # so binwidths object still starts at 0 and goes to max, bin 1 and last different widths
+  
+  maxLrange <- dplyr::bind_rows(quantsurv, quantfish) %>%
     dplyr::group_by(Name) %>%
-    dplyr::summarise(minminL = min(minlen),
-                     maxmaxL = max(maxlen))
+    dplyr::summarise(minqlo = min(q0.1),
+                     maxqhi = max(q0.9),
+                     maxmaxL = max(maxlen)) %>%
+    dplyr::filter(!is.na(Name))
   
-  equalbinwidths <- function(Lmax, Nsizebins){
-    bindef <- max(1,ceiling(Lmax/Nsizebins))
-    binwidths <- rep(bindef, Nsizebins)
+  quantbinwidths <- function(qlo, qhi, Lmax, Nsizebins){
+    range  <- qhi-qlo
+    bindef <- max(1,ceiling(range/Nsizebins))
+    binwidths <- c(ceiling(qlo + bindef),
+                   rep(bindef, Nsizebins-2),
+                   ceiling(bindef + Lmax-qhi))
     return(binwidths)
   }
   
   newbins <- maxLrange %>%
     dplyr::group_by(Name) %>%
-    dplyr::group_modify(~broom::tidy(equalbinwidths(.$maxmaxL, Nsizebins))) %>%
+    dplyr::group_modify(~broom::tidy(quantbinwidths(.$minqlo,
+                                                    .$maxqhi,
+                                                    .$maxmaxL, 
+                                                    Nsizebins))) %>%
     dplyr::mutate(lb = paste0("sizebin",seq(1:Nsizebins))) %>%
     tidyr::pivot_wider(names_from = lb, values_from = x)
+  
   
   binwidth <- as.data.frame(newbins) %>%
     dplyr::select(-Name, everything()) %>%
@@ -419,12 +452,19 @@ get_DatData_msk <- function(dattype,
   # path to data
   #path <- paste0(getwd(),"/",options$pathToDataFiles)
   
+  dietyrs <- survdiet %>% dplyr::summarise(count = dplyr::n_distinct(year))
+  
   predPrey <- survdiet %>%
     dplyr::mutate(species = Name) %>%
     dplyr::filter(prey %in% unique(species)) %>%
     dplyr::select(species, agecl, year, prey, value) %>%
     dplyr::group_by(species, prey) %>%
-    dplyr::summarise(avgpreyprop = mean(value, na.rm=T)) 
+    dplyr::summarise(yrct = dplyr::n_distinct(year),
+                     avgpreyprop = mean(value, na.rm=T)) %>%
+    dplyr::group_by(species) %>%
+    dplyr::mutate(maxyrct =  max(yrct)) %>%
+    dplyr::filter(maxyrct > 0.3 * dietyrs$count) # drops preds with isolated obs 
+                           #0.15 keeps haddock 0.2 keeps mackerel
   
   neverprey <- setdiff(predPrey$species, predPrey$prey)
   
@@ -433,14 +473,15 @@ get_DatData_msk <- function(dattype,
     dplyr::select(species=Name, prey, avgpreyprop) %>%
     dplyr::mutate(avgpreyprop = ceiling(avgpreyprop)) %>%
     tidyr::spread(species, avgpreyprop) %>%
+    dplyr::filter(!is.na(prey)) %>%
     dplyr::arrange(prey) %>%
     replace(is.na(.), 0)
   
   if(length(neverprey)>0){
     foodweb <- foodweb %>%
       dplyr::mutate(prey = dplyr::case_when(is.na(prey) ~ neverprey,
-                                          TRUE ~ prey))
-  }
+                                               TRUE ~ prey))
+  } 
   
   
   predOrPrey <- ifelse(colSums(foodweb[-1])>0, 1, 0)
@@ -471,7 +512,7 @@ get_DatData_msk <- function(dattype,
   d$Nspecies <- length(unique(focalspp$Name))
   d$Nsizebins <- nlenbin
   d$Nareas <- 1
-  d$Nfleets <- 2
+  d$Nfleets <- length(unique(fishindex$fishery)) 
   d$Nsurveys <- length(unique(survindex$survey))
   d$wtconv <- 1
   d$yr1Nphase <- 1
@@ -487,6 +528,9 @@ get_DatData_msk <- function(dattype,
   d$ssphase <- 1
   d$ssigPhase <- -1
   d$csigPhase <- -1
+  d$m1phase <-  -1
+  d$oF1phase <- -1
+  d$oFdevphase <- -1
   d$phimax <- 1
   d$scaleInitialN <- 1
   d$otherFood <- 1e+09
@@ -714,12 +758,12 @@ get_DatData_msk <- function(dattype,
       dplyr::left_join(fishlensamp) %>%
       dplyr::rename(inpN = ntrips) %>%
       dplyr::mutate(type = 0) %>%
-      dplyr::left_join(fleetdef) %>%
+      dplyr::left_join(fleetdef %>% dplyr::select(species, qind)) %>%
       dplyr::rename(fishery = qind) %>%
       dplyr::mutate(area = 1) %>%
       dplyr::mutate(dplyr::across(c(dplyr::contains("sizebin")), ~./totN)) %>%
       dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
-      dplyr::select(-totN, -Code, -pelagic, -demersal) %>%
+      dplyr::select(-totN, -Code) %>%
       dplyr::select(fishery, area, year, species, type, inpN, everything()) %>%
       dplyr::arrange(fishery, area, species, year)
     
@@ -833,7 +877,8 @@ get_DatData_msk <- function(dattype,
     #dplyr::left_join(svalphamultlook) %>% #what is effective sample size for Dirichlet?
     #dplyr::mutate(inpN = max(surv_alphamult_n/100000, 5)) %>% #rescale this input for now
     dplyr::mutate(inpN = 100) %>% #hardcoded simulated sample size, revisit
-    dplyr::select(survey, year, species, sizebin, inpN, everything())#, -surv_alphamult_n)
+    dplyr::select(survey, year, species, sizebin, inpN, everything()) %>% #, -surv_alphamult_n)
+    dplyr::filter(species %in% names(predOrPrey)[predOrPrey==1]) #include only kept predators
   
   # use 0 for missing value
   obsSurvDiet <- obsSurvDiet %>%
@@ -845,17 +890,18 @@ get_DatData_msk <- function(dattype,
   obsSurvDiet$sizebin <- as.numeric(regmatches(obsSurvDiet$sizebin, regexpr("\\d+", obsSurvDiet$sizebin)))#take the number portion of sizebinN
   d$observedSurvDiet <- obsSurvDiet
   
-  # observed effort by fleet (dummy, not used in estimation model)
-  # also hardcoded for current 2 fleets
+  # observed effort by fleet (dummy, not used in estimation model) but fleenames used
+  # also hardcoded for current 2 fleets--fixed dec 2022
   #fleetnames <- c("allbutcod", "codfleet")
-  fleetnames <- names(fleetdef)[2:3]
+  
+  fleetnames <- names(fleetdef)[!names(fleetdef) %in% c("species", "qind")]
   
   obsEffort <- data.frame(1:d$Nyrs,
                           matrix(1, d$Nyrs, d$Nfleets))
   names(obsEffort) <- c("year", fleetnames)
     
   d$observedEffort <- t(obsEffort)
-  d$fleetNames <- (names(obsEffort)[2:(d$Nfleets+1)])
+  d$fleetNames <- fleetnames #(names(obsEffort)[2:(d$Nfleets+1)])
   
   # observed temperature
   
@@ -923,7 +969,7 @@ get_DatData_msk <- function(dattype,
   }
   
   stomachContent <- stomachContent %>%
-    dplyr::filter(species %in% focalspp$Name)
+    dplyr::filter(species %in% focalspp$Name) 
   
   d$intakeStomach <- as.matrix(stomachContent[,2:(d$Nsizebins+1)])
   
@@ -1084,10 +1130,11 @@ get_DatData_msk <- function(dattype,
   d$intakeBeta <- unlist(intake["beta",])
   
   # M1, annual value to be rescaled in hydra after Nstepsyr is calculated
-  M1 <- as.data.frame(matrix(0.1, d$Nspecies, d$Nsizebins, 
-                             dimnames = list(c(sort.default(d$speciesList)),  
-                                             c(paste0("sizeclass",seq(1:d$Nsizebins)))))) 
-  d$M1 <- as.matrix(M1)
+  # Dec 2022 moved to pin and reformatted for estimation
+  # M1 <- as.data.frame(matrix(0.1, d$Nspecies, d$Nsizebins, 
+  #                            dimnames = list(c(sort.default(d$speciesList)),  
+  #                                            c(paste0("sizeclass",seq(1:d$Nsizebins)))))) 
+  # d$M1 <- as.matrix(M1)
   
   #foodweb, object created above
   foodweb <- foodweb %>% tibble::column_to_rownames("prey")
@@ -1196,6 +1243,7 @@ get_PinData_msk <- function(dattype,
                             Nfleets = d$Nfleets,
                             Nsurveys = d$Nsurveys,
                             Nareas = d$Nareas,
+                            Npreds = sum(d$predOrPrey),
                             fqind = d$indicatorFisheryq,
                             observedCatch = d$observedCatch,
                             observedBiomass = d$observedBiomass,
@@ -1307,9 +1355,7 @@ get_PinData_msk <- function(dattype,
                      "Goosefish")
     
     Y1N <-Y1N[order(rownames(Y1N)),]
-    
     Y1N <-Y1N[unique(speciesList),]
-    
     Y1N <- log(Y1N[,] + 1e-8)
   }
   
@@ -1420,6 +1466,15 @@ get_PinData_msk <- function(dattype,
   
   p$survsel_pars <- matrix(c(survsel_c,survsel_d), ncol = Nsurveys, byrow = TRUE)
   
+  # M1 init_matrix ln_M1ann(1,Nareas,1,Nspecies,m1_phase)
+  M1ann <- rep(0.1, Nspecies)
+  p$ln_M1ann <- log(M1ann)
+  
+  # ln_otherFood base // amount of other food included in the M2 term for the base (predator 1)
+  p$ln_otherFood <- 21
+  
+  # other food devs //deviation from base other food for predators 2+  (same other food for all size classes of each predator)
+  p$otherFood_dev <- rep(0, Npreds-1)
   
   # fishery and survey sigmas not used in estimation
   # survey q and obs error
