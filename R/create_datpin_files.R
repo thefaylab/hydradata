@@ -547,8 +547,9 @@ write_DatFile <- function(dataList,listOfParameters) {
   cat(c(" ",dataList$LFISize),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("# init_number scaleInitialN.  used to scale initial yr1N abundances found in .pin file",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat(c(" ",dataList$scaleInitialN),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat("# other food term",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
-  cat(c(" ",dataList$otherFood),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # OTHER FOOD MOVED TO PIN FILE
+  # cat("# other food term",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  # cat(c(" ",dataList$otherFood),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
 
   # scaling effort due to NEUS shel effort and not GB effort.
   cat("#init_matrix effortScaled(1,Nareas,1,Nspecies)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
