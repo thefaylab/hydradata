@@ -74,6 +74,8 @@ binwidth <- as.data.frame(newbins) %>%
   dplyr::select(-Name, everything()) %>%
   dplyr::rename('commentField-notused' = Name)
 
+bindef <- list()
+
 bindef$binwidth <- binwidth[1:Nspecies,1:Nsizebins]
 row.names(bindef$binwidth) <- binwidth[,ncol(binwidth)]
 
