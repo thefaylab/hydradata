@@ -1219,6 +1219,7 @@ get_PinData_msk <- function(dattype,
                             Nfleets = d$Nfleets,
                             Nsurveys = d$Nsurveys,
                             Nareas = d$Nareas,
+                            Npreypar = sum(d$foodweb)
                             Npreds = sum(d$predOrPrey),
                             fqind = d$indicatorFisheryq,
                             observedCatch = d$observedCatch,
@@ -1433,6 +1434,8 @@ get_PinData_msk <- function(dattype,
   
   p$ln_survey_q <- log(surveyqs)
   
+  # logit_vuln, 1:Npreypar (number of elements of isprey/foodweb matrix)
+  p$logit_vuln <- rep(10.0, Npreypar)
 
   # survey_selpars
   survsel_c <- rep(1, Nsurveys)

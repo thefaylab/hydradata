@@ -855,6 +855,11 @@ write_estPinFile <- function(dataList,listOfParameters){
     cat(c(" ",dataList$Fdevs[fl,]),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   }
   
+  # logit_vuln, vector 1:Npreypar (number of elements of isprey matrix) Npreypar = sum(isprey(1));
+  cat("# logit_vuln, vector 1:Npreypar (number of elements of isprey matrix)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$logit_vuln),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
+  
   # fishsel_pars, matrix fishsel c and d, 1:Nfleets
   cat("# fishsel_pars, row 1 c, row 2 d, columns 1:Nfleets:",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   for (spar in 1:2) {
