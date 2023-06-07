@@ -202,12 +202,12 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
     survbiopar <- mskeyrun::realBiolPar
 
     #fix for real species simplest allocation: mackerel herring fleet 2 all else fleet 1
-    fleetdef <- focalspp %>%
-      dplyr::select(-NESPP3) %>% 
-      dplyr::distinct() %>%
-      dplyr::mutate(species = Name) %>%
-      dplyr::arrange(species) %>%
-      # #2 fleet config used for WGSAM model fitting fall 2022
+    # fleetdef <- focalspp %>%
+    #   dplyr::select(-NESPP3) %>% 
+    #   dplyr::distinct() %>%
+    #   dplyr::mutate(species = Name) %>%
+    #   dplyr::arrange(species) %>%
+       # #2 fleet config used for WGSAM model fitting fall 2022
       # dplyr::mutate(pelagic = dplyr::case_when(species %in% c("Atlantic_herring",
       #                                                         "Atlantic_mackerel") ~ 2,
       #                                          TRUE ~ 0),
@@ -218,34 +218,61 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       #               pelagic = pelagic/2) %>%
       # dplyr::select(species, demersal, pelagic, qind)
       #
+
       # #species = fleet config suggested at WGSAM Dec 2022
-      dplyr::mutate(fleetnames = Name,
-                    value = 1,
-                    qind = which(Name==Name)) %>%
-      dplyr::select(species, fleetnames, value, qind) %>%
-      tidyr::pivot_wider(names_from = fleetnames, values_from = value, values_fill = 0)
-      
+      # dplyr::mutate(fleetnames = Name,
+      #               value = 1,
+      #               qind = which(Name==Name)) %>%
+      # dplyr::select(species, fleetnames, value, qind) %>%
+      # tidyr::pivot_wider(names_from = fleetnames, values_from = value, values_fill = 0)
     
-    # need to have landings + discards = catch
-    fishindex <- mskeyrun::catchIndex %>%
+      # #fleets from data: demersal trawl, pelagic trawl, fixed
+    
+    # need to have landings + discards = catch, fleets from data with temporary NA fill  
+    fishindex <- mskeyrun::catchIndexGearNAfill %>%  
       dplyr::filter(YEAR %in% modyears) %>%
-      dplyr::left_join(focalspp %>% dplyr::mutate(NESPP3 = as.integer(NESPP3))) %>%
-      dplyr::filter(!is.na(Name)) %>%
       dplyr::select(-units) %>%
-      tidyr::pivot_wider(names_from = "variable", values_from = "value") %>%
-      dplyr::group_by(YEAR, Name) %>%
+      tidyr::pivot_wider(names_from = "variable", values_from = "valueNAfill") %>%
+      dplyr::group_by(YEAR, modelName, hydraFleets) %>%
       dplyr::mutate(catch = sum(`commercial landings`,`commercial discards`, na.rm = TRUE),
                     cv = 0.05) %>%
       dplyr::ungroup() %>%
       tidyr::pivot_longer(c(`commercial landings`, `commercial discards`, catch, cv), names_to = "variable", values_to = "value") %>%
       dplyr::mutate(units = ifelse(variable=="cv", "unitless", "metric tons")) %>%
-      dplyr::left_join(fleetdef, by=c("Name" = "species")) %>%
       dplyr::mutate(ModSim = "Actual",
                     year = YEAR,
-                    Code = SPECIES_ITIS,
+                    Code = NA,
                     Name = modelName,
-                    fishery = qind) %>%
+                    fishery = hydraFleets) %>%
       dplyr::select(ModSim, year, Code, Name, fishery, variable, value, units)
+    
+    # WHAT IS QIND FOR THESE FLEETS?
+    fleetdef <- fishindex %>%
+      dplyr::select(species=Name, fishery) %>% 
+      dplyr::distinct() %>%
+      dplyr::mutate(value = 1) %>%
+      tidyr::pivot_wider(names_from = "fishery", values_from = "value")
+    
+    # need to have landings + discards = catch THIS HAS NO FLEET INFO
+    # fishindex <- mskeyrun::catchIndex %>%
+    #   dplyr::filter(YEAR %in% modyears) %>%
+    #   dplyr::left_join(focalspp %>% dplyr::mutate(NESPP3 = as.integer(NESPP3))) %>%
+    #   dplyr::filter(!is.na(Name)) %>%
+    #   dplyr::select(-units) %>%
+    #   tidyr::pivot_wider(names_from = "variable", values_from = "value") %>%
+    #   dplyr::group_by(YEAR, Name) %>%
+    #   dplyr::mutate(catch = sum(`commercial landings`,`commercial discards`, na.rm = TRUE),
+    #                 cv = 0.05) %>%
+    #   dplyr::ungroup() %>%
+    #   tidyr::pivot_longer(c(`commercial landings`, `commercial discards`, catch, cv), names_to = "variable", values_to = "value") %>%
+    #   dplyr::mutate(units = ifelse(variable=="cv", "unitless", "metric tons")) %>%
+    #   dplyr::left_join(fleetdef, by=c("Name" = "species")) %>%
+    #   dplyr::mutate(ModSim = "Actual",
+    #                 year = YEAR,
+    #                 Code = SPECIES_ITIS,
+    #                 Name = modelName,
+    #                 fishery = qind) %>%
+    #   dplyr::select(ModSim, year, Code, Name, fishery, variable, value, units)
     
     #fishlen <- mskeyrun::realFisheryLencomp %>% #identical column names to sim, single fishery in real data
     fishlen <- mskeyrun::realFisheryLencompRaw %>% #this dataset does not borrow lengths  
