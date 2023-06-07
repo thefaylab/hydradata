@@ -503,10 +503,10 @@ get_DatData_msk <- function(dattype,
   d$avgRecPhase <- 1
   d$recsigmaphase <- -1
   d$avgFPhase <- 1
-  d$devRecPhase <- 4
-  d$devFPhase <- 2
+  d$devRecPhase <- 2
+  d$devFPhase <- 1
   d$fqphase <- 1
-  d$fsphase <- 2
+  d$fsphase <- 1
   d$sqphase <- 1
   d$ssphase <- 1
   d$ssigPhase <- -1
