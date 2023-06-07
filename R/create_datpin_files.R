@@ -309,6 +309,8 @@ write_DatFile <- function(dataList,listOfParameters) {
   cat(c(" ",dataList$oF1phase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("#   init_int oFdev_phase          //deviation from base other food for predators 2+ phase",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat(c(" ",dataList$oFdevphase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat("#   init_int vuln_phase // phase for vulnerability parameters",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$vuln_phase),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   
   # stock recruitment parameters
   cat("#  init_matrix recGamma_alpha(1,Nareas,1,Nspecies)			//eggprod gamma Ricker model alpha",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)

@@ -514,6 +514,7 @@ get_DatData_msk <- function(dattype,
   d$m1phase <-  -1
   d$oF1phase <- -1
   d$oFdevphase <- -1
+  d$vuln_phase <- -1
   d$phimax <- 1
   d$scaleInitialN <- 1
   d$otherFood <- 1e+09
