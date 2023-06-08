@@ -247,11 +247,24 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       dplyr::select(ModSim, year, Code, Name, fishery, variable, value, units)
     
     # WHAT IS QIND FOR THESE FLEETS?
+    # qind supposed to represent target species for fleet
+    # define based on majority landings over full time series
     fleetdef <- fishindex %>%
-      dplyr::select(species=Name, fishery) %>% 
-      dplyr::distinct() %>%
-      dplyr::mutate(value = 1) %>%
-      tidyr::pivot_wider(names_from = "fishery", values_from = "value")
+      dplyr::filter(year %in% modyears,
+                    variable == "commercial landings") %>%
+      dplyr::group_by(Name, fishery) %>%
+      dplyr::summarise(totwt = sum(value, na.rm = TRUE)) %>%
+      dplyr::select(species=Name, fishery, totwt) %>% 
+      dplyr::mutate(fishery = as.factor(fishery)) %>%
+      dplyr::group_by(species) %>%
+      dplyr::slice_max(totwt) %>%
+      dplyr::mutate(totwt = 1,
+                    qind = levels(fishery))
+    
+    %>%
+      tidyr::pivot_wider(names_from = "species", values_from = "totwt", values_fill = 0) %>%
+
+
     
     # need to have landings + discards = catch THIS HAS NO FLEET INFO
     # fishindex <- mskeyrun::catchIndex %>%
