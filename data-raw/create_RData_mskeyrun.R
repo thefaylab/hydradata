@@ -1275,7 +1275,7 @@ get_PinData_msk <- function(dattype,
                             Nfleets = d$Nfleets,
                             Nsurveys = d$Nsurveys,
                             Nareas = d$Nareas,
-                            Npreypar = sum(d$foodweb)
+                            Npreypar = sum(d$foodweb),
                             Npreds = sum(d$predOrPrey),
                             fqind = d$indicatorFisheryq,
                             observedCatch = d$observedCatch,
