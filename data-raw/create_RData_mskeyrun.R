@@ -259,11 +259,8 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       dplyr::group_by(species) %>%
       dplyr::slice_max(totwt) %>%
       dplyr::mutate(totwt = 1,
-                    qind = levels(fishery))
-    
-    %>%
-      tidyr::pivot_wider(names_from = "species", values_from = "totwt", values_fill = 0) %>%
-
+                    qind = match(fishery, levels(fishery))) %>%
+      tidyr::spread(fishery, totwt, fill = 0) #spread orders columns by factor level, desirable here
 
     
     # need to have landings + discards = catch THIS HAS NO FLEET INFO
@@ -294,8 +291,8 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       dplyr::mutate(Code = as.character(Code)) %>%
       dplyr::left_join(focalspp %>% dplyr::select(-NESPP3) %>% dplyr::distinct(), by=c("Name" = "LongName", "Code" = "SPECIES_ITIS")) %>%
       dplyr::mutate(Name = modelName) %>%
-      dplyr::left_join(fleetdef, by=c("Name" = "species")) %>%
-      dplyr::mutate(fishery = qind) %>%
+      #dplyr::left_join(fleetdef, by=c("Name" = "species")) %>% #fleets are already in the data, don't replace
+      #dplyr::mutate(fishery = qind) %>%
       dplyr::select(ModSim, year, Code, Name, fishery, lenbin, variable, value, units) #%>%
       #dplyr::filter(lenbin < 250) #temporary fix to remove goosefish lenbin 347
     
@@ -715,7 +712,8 @@ get_DatData_msk <- function(dattype,
   # need fleet defs first. the user will need to set these up above
   # WARNING currently hardcoded for 2 NOBA sim fleets
   
-  
+  if(dattype == "sim"){
+    
   # new long format
   obsCatch <- fishindex %>%
     dplyr::mutate(species = Name) %>%
@@ -731,6 +729,26 @@ get_DatData_msk <- function(dattype,
     dplyr::mutate(fishery = qind) %>%
     dplyr::select(fishery, area, year, species, catch, cv) %>%
     dplyr::arrange(fishery, species, year)
+  }
+  
+  if(dattype == "real"){
+    
+    # new long format, index now includes fishery, don't overwrite with qind
+    obsCatch <- fishindex %>%
+      dplyr::filter(variable %in% c("catch", "cv")) %>%
+      dplyr::mutate(species = Name) %>%
+      dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
+      tidyr::pivot_wider(-units, names_from = "variable", values_from = "value") %>%
+      dplyr::group_by(species) %>%
+      dplyr::mutate(totcatch = sum(catch)) %>%
+      dplyr::ungroup() %>%
+      dplyr::filter(totcatch > 0) %>%
+      dplyr::select(-totcatch) %>%
+      dplyr::mutate(area = 1) %>%
+      dplyr::select(fishery, area, year, species, catch, cv) %>%
+      dplyr::arrange(fishery, species, year)
+  }
+  
   
   d$Ncatch_obs <- dim(obsCatch)[1]
   obsCatch$fishery <- as.numeric(as.factor(obsCatch$fishery))
@@ -767,13 +785,13 @@ get_DatData_msk <- function(dattype,
   
   if(dattype == "real"){
     
-    # observed catch size composition
+    # observed catch size composition; keep current fishery
     obsCatchSize <- fishlen %>%
       dplyr::mutate(species = Name) %>%
-      dplyr::select(species, Code, year, lenbin, value) %>%
+      dplyr::select(fishery, species, Code, year, lenbin, value) %>%
       dplyr::left_join(modbins) %>%
       dplyr::filter(modbin.min <= lenbin & lenbin < modbin.max) %>% #lenbin defined as lower
-      dplyr::group_by(species, Code, year, sizebin) %>%
+      dplyr::group_by(fishery, species, Code, year, sizebin) %>%
       dplyr::summarise(sumlen = sum(value)) %>%
       tidyr::spread(sizebin, sumlen) %>%
       dplyr::ungroup() %>%
@@ -781,8 +799,6 @@ get_DatData_msk <- function(dattype,
       dplyr::left_join(fishlensamp) %>%
       dplyr::rename(inpN = ntrips) %>%
       dplyr::mutate(type = 0) %>%
-      dplyr::left_join(fleetdef %>% dplyr::select(species, qind)) %>%
-      dplyr::rename(fishery = qind) %>%
       dplyr::mutate(area = 1) %>%
       dplyr::mutate(dplyr::across(c(dplyr::contains("sizebin")), ~./totN)) %>%
       dplyr::mutate(year = year-fitstartyr) %>% #year starts at 1
