@@ -260,7 +260,8 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       dplyr::slice_max(totwt) %>%
       dplyr::mutate(totwt = 1,
                     qind = match(fishery, levels(fishery))) %>%
-      tidyr::spread(fishery, totwt, fill = 0) #spread orders columns by factor level, desirable here
+      tidyr::spread(fishery, totwt, fill = 0) %>% #spread orders columns by factor level, desirable here
+      dplyr::ungroup()
 
     
     # need to have landings + discards = catch THIS HAS NO FLEET INFO
@@ -341,6 +342,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
                        Nfleets = d$Nfleets,
                        Nsurveys = d$Nsurveys,
                        Nareas = d$Nareas,
+                       Npreypar = sum(d$foodweb),
                        Npreds = sum(d$predOrPrey),
                        fqind = d$indicatorFisheryq,
                        observedCatch = d$observedCatch,
