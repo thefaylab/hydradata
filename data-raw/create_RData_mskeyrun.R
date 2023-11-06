@@ -43,6 +43,17 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
                     codfleet = codfleet/2) %>%
       dplyr::select(species, allbutcod, codfleet, qind)
     
+    # need to add fleets to fishindex
+    fishlook <- fleetdef |>
+      tidyr::pivot_longer(-c(species, qind), names_to = "fleet") |>
+      dplyr::filter(value==1) |>
+      dplyr::select(Name=species, fleet)
+    
+    fishindex <- fishindex |>
+      dplyr::left_join(fishlook) |>
+      dplyr::mutate(fishery = fleet) |>
+      dplyr::select(-fleet)
+    
   }
 
   if(dattype == "real"){
