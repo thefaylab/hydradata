@@ -58,6 +58,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
 
   if(dattype == "real"){
     modyears <- 1978:2019  # 1968 agreed for project, testing with shorter dataset
+    simplifyfleets <- TRUE # not modeling bycatch, aggregate gears to main fleet
   
     focalspp <- mskeyrun::focalSpecies %>%
       dplyr::filter(modelName != "Pollock") %>% # not using in these models
@@ -257,18 +258,91 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
                     fishery = hydraFleets) %>%
       dplyr::select(ModSim, year, Code, Name, fishery, variable, value, units)
     
+    # SIMPLIFY for MSE: aggregate gear fisheries to major gears and allow fleetdef to split
+    if(simplifyfleets){
+      dominantfleets <- fishindex |>
+        dplyr::select(-units) |>
+        tidyr::pivot_wider(names_from = "variable", values_from = "value") |>
+        dplyr::select(-c(`commercial landings`, `commercial discards`, cv)) |>
+        dplyr::group_by(year, Name) |>
+        dplyr::mutate(totcatch = sum(catch),
+                      propcatch = catch/totcatch,
+                      keep = ifelse(propcatch>0.25, 1, 0)) |> #gear must account for more than 25% of catch
+        dplyr::group_by(Name, fishery) |>
+        dplyr::summarise(nover25 = sum(keep)) |>
+        dplyr::filter(nover25>10) |> # in more than 10 years (25%) of the time series
+        as.data.frame()
+      
+      # herring hack
+      herringhack <- dominantfleets[!(dominantfleets$Name == "Atlantic_herring" &
+                                      dominantfleets$fishery == "demersal"), ]
+      
+      domfleet <- herringhack
+      #domfleet <- dominantfleets # if we want to use the algorithm 
+        
+      #keep data from dominant fleets and sum the rest into them proportionally
+      # by year
+      # extract proportion by major gear by spp, year
+      propgear <- fishindex |>
+        dplyr::left_join(domfleet) |>
+        dplyr::filter(!is.na(nover25),
+                      variable %in% c("catch")) %>%
+        dplyr::group_by(Name, year, fishery) %>%
+        dplyr::summarise(majorgear = sum(value, na.rm = T)) %>%
+        dplyr::mutate(prop = majorgear/sum(majorgear)) %>%
+        dplyr::ungroup()
+      
+      # apply proportion to minor gear component
+      fillminorgear <- fishindex |>
+        dplyr::left_join(domfleet) |>
+        dplyr::filter(is.na(nover25),
+                      variable %in% c("catch")) %>%
+        dplyr::select(-fishery) %>%
+        dplyr::left_join(propgear) %>%
+        dplyr::mutate(value = value*prop) %>%
+        dplyr::select(-c(majorgear, prop)) 
+      
+      # add NA fill back in with gear catch renaming value
+      test <- fishindex |>
+        dplyr::left_join(domfleet) |>
+        dplyr::filter(!is.na(nover25),
+                      variable %in% c("catch")) %>%
+        dplyr::bind_rows(fillminorgear) %>%
+        dplyr::group_by(variable, Name, year, fishery) %>%
+        dplyr::summarise(valueNAfill = sum(value, na.rm = T)) 
+      
+      # this plots the test object
+        # ggplot2::ggplot(test, ggplot2::aes(x = year, y = valueNAfill, colour = fishery)) +
+        # ggplot2::geom_point() +
+        # ggplot2::facet_wrap(~Name,  scales = "free_y") +
+        # ggplot2::theme_bw()
+      
+      # add back in fishindex columns needed next
+      fishindex <- test |>
+        tidyr::pivot_wider(names_from = "variable", values_from = "valueNAfill") |>
+        dplyr::mutate(cv = 0.05) %>%
+        dplyr::ungroup() %>%
+        tidyr::pivot_longer(c(catch, cv), names_to = "variable", values_to = "value") %>%
+        dplyr::mutate(units = ifelse(variable=="cv", "unitless", "metric tons")) %>%
+        dplyr::mutate(ModSim = "Actual",
+                      Code = NA) %>%
+        dplyr::select(ModSim, year, Code, Name, fishery, variable, value, units)
+      
+        
+    }
+    
     # WHAT IS QIND FOR THESE FLEETS?
     # qind supposed to represent target species for fleet
-    # define based on majority landings over full time series
+    # can have more than one
     fleetdef <- fishindex %>%
       dplyr::filter(year %in% modyears,
-                    variable == "commercial landings") %>%
+                    variable == "catch") %>%
       dplyr::group_by(Name, fishery) %>%
       dplyr::summarise(totwt = sum(value, na.rm = TRUE)) %>%
       dplyr::select(species=Name, fishery, totwt) %>% 
       dplyr::mutate(fishery = as.factor(fishery)) %>%
       dplyr::group_by(species) %>%
-      dplyr::slice_max(totwt) %>%
+      #dplyr::slice_max(totwt) %>%
       dplyr::mutate(totwt = 1,
                     qind = match(fishery, levels(fishery))) %>%
       tidyr::spread(fishery, totwt, fill = 0) %>% #spread orders columns by factor level, desirable here
@@ -303,8 +377,8 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
       dplyr::mutate(Code = as.character(Code)) %>%
       dplyr::left_join(focalspp %>% dplyr::select(-NESPP3) %>% dplyr::distinct(), by=c("Name" = "LongName", "Code" = "SPECIES_ITIS")) %>%
       dplyr::mutate(Name = modelName) %>%
-      #dplyr::left_join(fleetdef, by=c("Name" = "species")) %>% #fleets are already in the data, don't replace
-      #dplyr::mutate(fishery = qind) %>%
+      dplyr::left_join(fleetdef, by=c("Name" = "species")) %>% 
+      dplyr::mutate(fishery = qind) %>%
       dplyr::select(ModSim, year, Code, Name, fishery, lenbin, variable, value, units) #%>%
       #dplyr::filter(lenbin < 250) #temporary fix to remove goosefish lenbin 347
     
@@ -358,6 +432,7 @@ create_RData_mskeyrun <- function(dattype = c("sim", "real"),
                        fqind = d$indicatorFisheryq,
                        observedCatch = d$observedCatch,
                        observedBiomass = d$observedBiomass,
+                       tvarq = d$flag_tvar_q,
                        path)
   
   d$recName <- rep("avgplusdevs",d$Nspecies) # this is a hack. NEED to sort out data inputs
@@ -1198,6 +1273,8 @@ get_DatData_msk <- function(dattype,
   
   # fishery catchability indicator (q's)
   indicatorFisheryqs<- fleetdef %>%
+    dplyr::group_by(species) |>
+    dplyr::summarise_all(sum) |>
     dplyr::select(dplyr::all_of(fleetnames))
   d$indicatorFisheryq<- as.matrix(t(indicatorFisheryqs))
   
@@ -1264,9 +1341,24 @@ get_DatData_msk <- function(dattype,
   d$areaMortality <- unlist(areaMortality)
   
   # add missing vectors from sim not used in est
-  if(is.null(d$fleetMembership)) d$fleetMembership <- fleetdef$qind #WARNING:assumes guilds=species
+  # fleetMembership needs to be 1:numGuilds, not used in est fill with 0
+  if(is.null(d$fleetMembership)) d$fleetMembership <- rep(0, d$numGuilds)# fleetdef$qind #now multiple fleets
   if(is.null(d$minExploitation)) d$minExploitation <- rep(1e-05, d$Nfleets)
   if(is.null(d$maxExploitation)) d$maxExploitation <- rep(0.999, d$Nfleets)
+  
+ # pMSE options
+  # more options to be changed by user, added Nov 2023
+  # time varying mortality (fixed multiplier for prey items)
+  d$m1_change_yr <- 40 # yr to implement change, if -99 no change applied
+  d$m1_multiplier <- 1.5 # value to scale M1 by
+  
+  # time varying other food (fixed multiplier, same for all)
+  d$of_change_yr <- 40 # yr to implement change, if -99 no change applied
+  d$of_multiplier <- 1.5 # value to scale oF by
+  
+  # whether to have varying q or a fixed input
+  d$flag_tvar_q <- 1 # 0 = fixed value over time, 1 = annual values
+  
   
   
   # replace NA
@@ -1293,6 +1385,7 @@ get_PinData_msk <- function(dattype,
                             fqind = d$indicatorFisheryq,
                             observedCatch = d$observedCatch,
                             observedBiomass = d$observedBiomass,
+                            tvarq = d$flag_tvar_q,
                             path){
   # Stipulate all information required for the pin data file
   p <- list()
@@ -1489,7 +1582,11 @@ get_PinData_msk <- function(dattype,
   Nqpars <-length(fqind[fqind>0]) - Nfleets*Nareas
   
   # fishery catchability (q's)
+  
   fisheryqs<- rep(1, Nqpars)
+  if(tvarq==1){
+    fisheryqs <- matrix(1, Nyrs, Nqpars)
+  }
   
   p$fisheryq <- read.csv(paste0(path,"/fishing_q_NOBA.csv"),header=TRUE,row.names = 1) #old for -sim.pin
   

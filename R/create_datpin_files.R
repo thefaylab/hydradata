@@ -620,6 +620,27 @@ write_DatFile <- function(dataList,listOfParameters) {
   cat("# init_matrix areaMortality(1,Nareas,1,Nspecies). Total mortality outside of areae management area",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat(c(" ",dataList$areaMortality),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
 
+  # Gavin's additions for pMSE 2023
+  # residual mortality m1_change_yr
+  cat("# m1_change_yr",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$m1_change_yr),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
+  # residual mortality m1_multiplier
+  cat("# m1_multiplier",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$m1_multiplier),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
+  # other food of_change_yr
+  cat("# of_change_yr",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$of_change_yr),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
+  # other food of_multiplier
+  cat("# of_multiplier",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$of_multiplier),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+    
+  # use annual q? (0 = fixed over time, 1 = annual parameter vector)
+  cat("# use annual q? (0 = fixed over time, 1 = annual parameter vector)",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  cat(c(" ",dataList$flag_tvar_q),file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
+  
   # end of file
   cat("# eof",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
   cat("54321",file=outputFileName,fill=listOfParameters$fillLength,append=TRUE)
